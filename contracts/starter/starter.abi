@@ -1,0 +1,46 @@
+{
+    "version": "eosio::abi/1.1",
+    "types": [],
+    "structs": [
+        {
+            "name": "hi",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "starter",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "hi",
+            "type": "hi",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "starter",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": [],
+            "type": "starter"
+        }
+    ],
+    "ricardian_clauses": [],
+    "error_messages": [],
+    "abi_extensions": [],
+    "variants": []
+}
