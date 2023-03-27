@@ -1,6 +1,0 @@
-.next
-.env*.local
-cypress/videos
-cypress/screenshots
-cypress/downloads
-cypress.env.json

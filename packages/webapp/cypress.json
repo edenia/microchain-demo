@@ -1,6 +1,0 @@
-{
-    "baseUrl": "http://localhost:3000",
-    "env": {
-        "test_user_pk": "5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"
-    }
-}

@@ -124,34 +124,9 @@ using ordered_by_pk = boost::multi_index::ordered_unique<  //
     boost::multi_index::key<&T::by_pk>>;
 
 template <typename T>
-using ordered_by_invitee = boost::multi_index::ordered_unique<  //
-    boost::multi_index::tag<by_invitee>,
-    boost::multi_index::key<&T::by_invitee>>;
-
-template <typename T>
-using ordered_by_group = boost::multi_index::ordered_unique<  //
-    boost::multi_index::tag<by_group>,
-    boost::multi_index::key<&T::by_group>>;
-
-template <typename T>
-using ordered_by_round = boost::multi_index::ordered_unique<  //
-    boost::multi_index::tag<by_round>,
-    boost::multi_index::key<&T::by_round>>;
-
-template <typename T>
 using ordered_by_createdAt = boost::multi_index::ordered_unique<  //
     boost::multi_index::tag<by_createdAt>,
     boost::multi_index::key<&T::by_createdAt>>;
-
-template <typename T>
-using ordered_by_member = boost::multi_index::ordered_unique<  //
-    boost::multi_index::tag<by_member>,
-    boost::multi_index::key<&T::by_member>>;
-
-template <typename T>
-using ordered_by_owner = boost::multi_index::ordered_unique<  //
-    boost::multi_index::tag<by_owner>,
-    boost::multi_index::key<&T::by_owner>>;
 
 uint64_t available_pk(const auto& table, const auto& first)
 {
@@ -163,20 +138,8 @@ uint64_t available_pk(const auto& table, const auto& first)
 
 enum tables
 {
-   status_table,
-   balance_table,
-   balance_history_table,
    induction_table,
    member_table,
-   session_table,
-   election_table,
-   election_round_table,
-   election_group_table,
-   vote_table,
-   distribution_table,
-   distribution_fund_table,
-   nft_table,
-   encryption_key_table,
 };
 
 struct Induction;
@@ -193,153 +156,7 @@ using MemberElectionConnection =
                                                   MemberElectionConnection_name,
                                                   MemberElectionEdge_name>>;
 
-struct Vote;
-using vote_key = std::tuple<eosio::name, eosio::block_timestamp, uint8_t>;
-constexpr const char VoteConnection_name[] = "VoteConnection";
-constexpr const char VoteEdge_name[] = "VoteEdge";
-using VoteConnection =
-    clchain::Connection<clchain::ConnectionConfig<Vote, VoteConnection_name, VoteEdge_name>>;
-
-struct DistributionFund;
-constexpr const char DistributionFundConnection_name[] = "DistributionFundConnection";
-constexpr const char DistributionFundEdge_name[] = "DistributionFundEdge";
-using DistributionFundConnection =
-    clchain::Connection<clchain::ConnectionConfig<DistributionFund,
-                                                  DistributionFundConnection_name,
-                                                  DistributionFundEdge_name>>;
-
-struct Nft;
-constexpr const char NftConnection_name[] = "NftConnection";
-constexpr const char NftEdge_name[] = "NftEdge";
-using NftConnection =
-    clchain::Connection<clchain::ConnectionConfig<Nft, NftConnection_name, NftEdge_name>>;
-
-struct status
-{
-   bool active = false;
-   std::string community;
-   eosio::symbol communitySymbol;
-   eosio::asset minimumDonation;
-   std::vector<eosio::name> initialMembers;
-   std::string genesisVideo;
-   eden::atomicassets::attribute_map collectionAttributes;
-   eosio::asset auctionStartingBid;
-   uint32_t auctionDuration;
-   std::string memo;
-   eosio::block_timestamp nextElection;
-   uint16_t electionThreshold = 0;
-   uint16_t numElectionParticipants = 0;
-   uint16_t migrationIndex = 0;
-
-   template <typename T>
-   bool isMigrationCompleted() const
-   {
-      return migrationIndex >= boost::mp11::mp_find<eden::migration_variant, T>::value;
-   }
-};
-
-struct status_object : public chainbase::object<status_table, status_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(status_object)
-
-   id_type id;
-   status status;
-};
-using status_index = mic<status_object, ordered_by_id<status_object>>;
-
-// Invariants:
-// * sum of amount across all balance records = 0
-// * token_account record holds negative of total tokens held
-//   in eden_account's balance in token_account contract
-// * pool_account() (LSBs = 0x0f) records hold pool funds
-// * distribution_fund record holds funds which are distributed, or in the middle
-//   of being distributed, but not yet spent
-struct balance_object : public chainbase::object<balance_table, balance_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(balance_object)
-
-   id_type id;
-   eosio::name account;
-   eosio::asset amount;
-
-   auto by_pk() const { return account; }
-};
-using balance_index =
-    mic<balance_object, ordered_by_id<balance_object>, ordered_by_pk<balance_object>>;
-
-enum class history_desc
-{
-   deposit,                     // incoming eosio::token
-   withdraw,                    // outgoing eosio::token
-   external_spend,              // non-contract spend of general funds
-                                //    e.g. powerup
-                                //    e.g. transfer before contract installed
-   manual_transfer,             // manual spend of general funds (contract's transfer action)
-   fund_transfer,               // fundtransfer action
-   user_transfer,               // usertransfer action
-   fund,                        // received general funds from external source
-   donate,                      // user donated to general fund
-   inductdonate,                // user donated to general fund during induction
-   reserve_distribution,        // reserve funds for distribution
-   return_excess_distribution,  // return excess distribution funds to pool
-   return_distribution,         // return distribution funds to pool. e.g. member resigns
-};
-
-const char* history_desc_str[] = {
-    "deposit",                     //
-    "withdraw",                    //
-    "external spend",              //
-    "manual transfer",             //
-    "fund transfer",               //
-    "user transfer",               //
-    "fund",                        //
-    "donate",                      //
-    "inductdonate",                //
-    "reserve distribution",        //
-    "return excess distribution",  //
-    "return distribution",         //
-};
-
-using balance_history_key = std::tuple<eosio::name, eosio::block_timestamp, uint64_t>;
-
-// Invariants:
-// * All records have a twin with account and other_account swapped, and with delta = -delta
-// * The sum of deltas for an account match the balance_object for that account
-struct balance_history_object
-    : public chainbase::object<balance_history_table, balance_history_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(balance_history_object)
-
-   id_type id;
-   eosio::block_timestamp time;
-   eosio::name account;
-   eosio::asset delta;
-   eosio::asset new_amount;
-   eosio::name other_account;
-   history_desc description;
-
-   balance_history_key by_pk() const { return {account, time, id._id}; }
-};
-using balance_history_index = mic<balance_history_object,
-                                  ordered_by_id<balance_history_object>,
-                                  ordered_by_pk<balance_history_object>>;
-
 using InductionEndorser = std::pair<eosio::name, bool>;
-
-struct encryption_key_object : public chainbase::object<encryption_key_table, encryption_key_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(encryption_key_object)
-
-   id_type id;
-   eosio::name account;
-   eosio::public_key encryptionKey;
-
-   eosio::name by_pk() const { return account; }
-};
-
-using encryption_key_index = mic<encryption_key_object,
-                                 ordered_by_id<encryption_key_object>,
-                                 ordered_by_pk<encryption_key_object>>;
 
 struct induction
 {
@@ -347,11 +164,11 @@ struct induction
    InductionEndorser inviter;
    eosio::name invitee;
    std::vector<InductionEndorser> witnesses;
-   eden::new_member_profile profile;
+   // eden::new_member_profile profile;
    std::string video;
    eosio::block_timestamp createdAt;
 };
-EOSIO_REFLECT(induction, id, inviter, invitee, witnesses, profile, video, createdAt)
+EOSIO_REFLECT(induction, id, inviter, invitee, witnesses, /* profile, */ video, createdAt)
 
 using InductionCreatedAtKey = std::pair<eosio::block_timestamp, uint64_t>;
 
@@ -369,7 +186,6 @@ struct induction_object : public chainbase::object<induction_table, induction_ob
 using induction_index = mic<induction_object,
                             ordered_by_id<induction_object>,
                             ordered_by_pk<induction_object>,
-                            ordered_by_invitee<induction_object>,
                             ordered_by_createdAt<induction_object>>;
 
 using MemberCreatedAtKey = std::pair<eosio::block_timestamp, eosio::name>;
@@ -379,7 +195,7 @@ struct member
    eosio::name account;
    eosio::name inviter;
    std::vector<eosio::name> inductionWitnesses;
-   eden::new_member_profile profile;
+   // eden::new_member_profile profile;
    std::string inductionVideo;
    bool participating = false;
    eosio::block_timestamp createdAt;
@@ -400,207 +216,21 @@ using member_index = mic<member_object,
                          ordered_by_pk<member_object>,
                          ordered_by_createdAt<member_object>>;
 
-using SessionKey = std::tuple<eosio::name, eosio::public_key>;
-
-struct session_object : public chainbase::object<session_table, session_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(session_object)
-
-   id_type id;
-   eosio::name eden_account;
-   eosio::public_key key;
-   eosio::block_timestamp expiration;
-   std::string description;
-
-   SessionKey by_pk() const { return {eden_account, key}; }
-};
-using session_index =
-    mic<session_object, ordered_by_id<session_object>, ordered_by_pk<session_object>>;
-
-struct election_object : public chainbase::object<election_table, election_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(election_object)
-
-   id_type id;
-   eosio::block_timestamp time;
-   bool seeding = false;
-   bool results_available = false;
-   std::optional<eosio::block_timestamp> seeding_start_time;
-   std::optional<eosio::block_timestamp> seeding_end_time;
-   std::optional<eosio::checksum256> seed;
-   std::optional<uint8_t> num_rounds;
-   std::optional<uint16_t> num_participants;
-   std::optional<uint64_t> final_group_id;
-
-   auto by_pk() const { return time; }
-};
-using election_index =
-    mic<election_object, ordered_by_id<election_object>, ordered_by_pk<election_object>>;
-
-using ElectionRoundKey = std::tuple<eosio::block_timestamp, uint8_t>;
-
-struct election_round_object : public chainbase::object<election_round_table, election_round_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(election_round_object)
-
-   id_type id;
-   eosio::block_timestamp election_time;
-   uint8_t round = 0;
-   uint16_t num_participants = 0;
-   uint16_t num_groups = 0;
-   bool requires_voting = false;
-   bool groups_available = false;
-   bool voting_started = false;
-   bool voting_finished = false;
-   bool results_available = false;
-   std::optional<eosio::block_timestamp> voting_begin;
-   std::optional<eosio::block_timestamp> voting_end;
-
-   ElectionRoundKey by_round() const { return {election_time, round}; }
-};
-using election_round_index = mic<election_round_object,
-                                 ordered_by_id<election_round_object>,
-                                 ordered_by_round<election_round_object>>;
-
-using ElectionGroupKey = std::tuple<eosio::block_timestamp, uint8_t, eosio::name>;
-using ElectionGroupByRoundKey = std::tuple<eosio::block_timestamp, uint8_t, uint64_t>;
-
-struct election_group_object : public chainbase::object<election_group_table, election_group_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(election_group_object)
-
-   id_type id;
-   eosio::block_timestamp election_time;
-   uint8_t round;
-   eosio::name first_member;
-   eosio::name winner;
-
-   ElectionGroupKey by_pk() const { return {election_time, round, first_member}; }
-   ElectionGroupByRoundKey by_round() const { return {election_time, round, id._id}; }
-};
-using election_group_index = mic<election_group_object,
-                                 ordered_by_id<election_group_object>,
-                                 ordered_by_pk<election_group_object>,
-                                 ordered_by_round<election_group_object>>;
-
-struct vote_object : public chainbase::object<vote_table, vote_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(vote_object)
-
-   id_type id;
-   eosio::block_timestamp election_time;
-   uint8_t round;
-   uint64_t group_id;
-   eosio::name voter;
-   eosio::name candidate;
-   std::string video;
-
-   vote_key by_pk() const { return {voter, election_time, round}; }
-   auto by_group() const { return std::tuple{group_id, voter}; }
-};
-using vote_index = mic<vote_object,
-                       ordered_by_id<vote_object>,
-                       ordered_by_pk<vote_object>,
-                       ordered_by_group<vote_object>>;
-
-struct distribution_object : public chainbase::object<distribution_table, distribution_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(distribution_object)
-
-   id_type id;
-   eosio::block_timestamp time;
-   bool started = false;
-   std::optional<eosio::asset> target_amount;
-   std::optional<std::vector<eosio::asset>> target_rank_distribution;
-
-   auto by_pk() const { return time; }
-};
-using distribution_index = mic<distribution_object,
-                               ordered_by_id<distribution_object>,
-                               ordered_by_pk<distribution_object>>;
-
-using distribution_fund_key = std::tuple<eosio::name, eosio::block_timestamp, uint8_t>;
-
-struct distribution_fund_object
-    : public chainbase::object<distribution_fund_table, distribution_fund_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(distribution_fund_object)
-
-   id_type id;
-   eosio::name owner;
-   eosio::block_timestamp distribution_time;
-   uint8_t rank;
-   eosio::asset initial_balance;
-   eosio::asset current_balance;
-
-   distribution_fund_key by_pk() const { return {owner, distribution_time, rank}; }
-};
-using distribution_fund_index = mic<distribution_fund_object,
-                                    ordered_by_id<distribution_fund_object>,
-                                    ordered_by_pk<distribution_fund_object>>;
-
-using nft_account_key = std::tuple<eosio::name, eosio::block_timestamp, uint64_t>;
-
-struct nft_object : public chainbase::object<nft_table, nft_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(nft_object)
-
-   id_type id;
-   eosio::name member;
-   eosio::name owner;
-   int32_t templateId;
-   uint64_t assetId;
-   uint32_t templateMint;
-   eosio::block_timestamp createdAt;
-
-   auto by_pk() const { return assetId; }
-   nft_account_key by_member() const { return {member, createdAt, assetId}; }
-   nft_account_key by_owner() const { return {owner, createdAt, assetId}; }
-};
-using nft_index = mic<nft_object,
-                      ordered_by_id<nft_object>,
-                      ordered_by_pk<nft_object>,
-                      ordered_by_member<nft_object>,
-                      ordered_by_owner<nft_object>>;
-
 struct database
 {
    chainbase::database db;
-   chainbase::generic_index<status_index> status;
-   chainbase::generic_index<balance_index> balances;
-   chainbase::generic_index<balance_history_index> balance_history;
-   chainbase::generic_index<encryption_key_index> encryption_keys;
    chainbase::generic_index<induction_index> inductions;
    chainbase::generic_index<member_index> members;
-   chainbase::generic_index<session_index> sessions;
-   chainbase::generic_index<election_index> elections;
-   chainbase::generic_index<election_round_index> election_rounds;
-   chainbase::generic_index<election_group_index> election_groups;
-   chainbase::generic_index<vote_index> votes;
-   chainbase::generic_index<distribution_index> distributions;
-   chainbase::generic_index<distribution_fund_index> distribution_funds;
-   chainbase::generic_index<nft_index> nfts;
 
    database()
    {
-      db.add_index(status);
-      db.add_index(balances);
-      db.add_index(balance_history);
-      db.add_index(encryption_keys);
       db.add_index(inductions);
       db.add_index(members);
-      db.add_index(sessions);
-      db.add_index(elections);
-      db.add_index(election_rounds);
-      db.add_index(election_groups);
-      db.add_index(votes);
-      db.add_index(distributions);
-      db.add_index(distribution_funds);
-      db.add_index(nfts);
    }
 };
 database db;
 
+// TEMPLATE FUNCTIONS
 template <typename Tag, typename Table, typename Key, typename F>
 void add_or_modify(Table& table, const Key& key, F&& f)
 {
@@ -658,6 +288,7 @@ const typename Table::value_type* get_ptr(Table& table, const Key& key)
       return nullptr;
    return &*it;
 }
+// END TEMPLATE FUNCTIONS
 
 const auto& get_status()
 {
@@ -670,188 +301,28 @@ struct Member;
 std::optional<Member> get_member(eosio::name account, bool allow_lsb = false);
 std::vector<Member> get_members(const std::vector<eosio::name>& v);
 
-struct BalanceHistory;
-constexpr const char BalanceHistoryConnection_name[] = "BalanceHistoryConnection";
-constexpr const char BalanceHistoryEdge_name[] = "BalanceHistoryEdge";
-using BalanceHistoryConnection =
-    clchain::Connection<clchain::ConnectionConfig<BalanceHistory,
-                                                  BalanceHistoryConnection_name,
-                                                  BalanceHistoryEdge_name>>;
-
-struct Balance
-{
-   eosio::name _account;
-   const balance_object* obj;
-
-   Member account() const;
-   std::optional<eosio::asset> amount() const
-   {
-      return obj ? std::optional{obj->amount} : std::nullopt;
-   }
-   BalanceHistoryConnection history(std::optional<eosio::block_timestamp> gt,
-                                    std::optional<eosio::block_timestamp> ge,
-                                    std::optional<eosio::block_timestamp> lt,
-                                    std::optional<eosio::block_timestamp> le,
-                                    std::optional<uint32_t> first,
-                                    std::optional<uint32_t> last,
-                                    std::optional<std::string> before,
-                                    std::optional<std::string> after) const;
-};
-EOSIO_REFLECT2(Balance,
-               account,
-               amount,
-               method(history, "gt", "ge", "lt", "le", "first", "last", "before", "after"))
-
-constexpr const char BalanceConnection_name[] = "BalanceConnection";
-constexpr const char BalanceEdge_name[] = "BalanceEdge";
-using BalanceConnection = clchain::Connection<
-    clchain::ConnectionConfig<Balance, BalanceConnection_name, BalanceEdge_name>>;
-
-Balance get_balance(eosio::name account)
-{
-   if (auto* obj = get_ptr<by_pk>(db.balances, account))
-      return Balance{account, obj};
-   else
-      return Balance{account, nullptr};
-}
-
-struct BalanceHistory
-{
-   const balance_history_object* obj;
-
-   eosio::block_timestamp time() const { return obj->time; }
-   Balance balance() const { return get_balance(obj->account); }
-   eosio::asset delta() const { return obj->delta; }
-   eosio::asset newAmount() const { return obj->new_amount; }
-   Balance otherBalance() const { return get_balance(obj->other_account); }
-   std::string description() const { return history_desc_str[(int)obj->description]; }
-};
-EOSIO_REFLECT2(BalanceHistory, time, balance, delta, newAmount, otherBalance, description)
-
-BalanceHistoryConnection Balance::history(std::optional<eosio::block_timestamp> gt,
-                                          std::optional<eosio::block_timestamp> ge,
-                                          std::optional<eosio::block_timestamp> lt,
-                                          std::optional<eosio::block_timestamp> le,
-                                          std::optional<uint32_t> first,
-                                          std::optional<uint32_t> last,
-                                          std::optional<std::string> before,
-                                          std::optional<std::string> after) const
-{
-   return clchain::make_connection<BalanceHistoryConnection, balance_history_key>(
-       gt ? std::optional{balance_history_key{_account, *gt, ~uint64_t(0)}}              //
-          : std::nullopt,                                                                //
-       ge ? std::optional{balance_history_key{_account, *ge, 0}}                         //
-          : std::optional{balance_history_key{_account, eosio::block_timestamp{0}, 0}},  //
-       lt ? std::optional{balance_history_key{_account, *lt, 0}}                         //
-          : std::nullopt,                                                                //
-       le ? std::optional{balance_history_key{_account, *le, ~uint64_t(0)}}              //
-          : std::optional{balance_history_key{_account, eosio::block_timestamp::max(),   //
-                                              ~uint64_t(0)}},                            //
-       first, last, before, after,                                                       //
-       db.balance_history.get<by_pk>(),                                                  //
-       [](auto& obj) { return obj.by_pk(); },                                            //
-       [&](auto& obj) { return BalanceHistory{&obj}; },
-       [](auto& balance_history, auto key) { return balance_history.lower_bound(key); },
-       [](auto& balance_history, auto key) { return balance_history.upper_bound(key); });
-}
-
-struct EncryptionKey
-{
-   eosio::name _account;
-   const encryption_key_object* obj;
-
-   Member account() const;
-   std::optional<std::string> encryptionKey() const
-   {
-      return obj ? std::optional{eosio::public_key_to_string(obj->encryptionKey)} : std::nullopt;
-   }
-};
-EOSIO_REFLECT2(EncryptionKey, account, encryptionKey)
-
-constexpr const char EncryptionKeyConnection_name[] = "EncryptionKeyConnection";
-constexpr const char EncryptionKeyEdge_name[] = "EncryptionKeyEdge";
-using EncryptionKeyConnection = clchain::Connection<
-    clchain::ConnectionConfig<EncryptionKey, EncryptionKeyConnection_name, EncryptionKeyEdge_name>>;
-
-EncryptionKey get_encryption_key(eosio::name account)
-{
-   if (auto* obj = get_ptr<by_pk>(db.encryption_keys, account))
-      return EncryptionKey{account, obj};
-   else
-      return EncryptionKey{account, nullptr};
-}
-
 struct Member
 {
    eosio::name account;
    const member* member;
 
-   auto balance() const { return get_balance(account); }
+   // TODO: restore the following function
+   // auto balance() const { return get_balance(account); }
    auto inviter() const { return get_member(member ? member->inviter : ""_n); }
-   std::optional<std::vector<Member>> inductionWitnesses() const
-   {
-      return member ? std::optional{get_members(member->inductionWitnesses)} : std::nullopt;
-   }
-   const eden::new_member_profile* profile() const { return member ? &member->profile : nullptr; }
+   // TODO: restore the following function
+   // const eden::new_member_profile* profile() const { return member ? &member->profile : nullptr; }
    const std::string* inductionVideo() const { return member ? &member->inductionVideo : nullptr; }
    bool participating() const { return member && member->participating; }
    eosio::block_timestamp createdAt() const { return member->createdAt; }
-
-   std::optional<std::string> encryptionKey() const
-   {
-      return get_encryption_key(account).encryptionKey();
-   }
-
-   NftConnection nfts(std::optional<eosio::block_timestamp> gt,
-                      std::optional<eosio::block_timestamp> ge,
-                      std::optional<eosio::block_timestamp> lt,
-                      std::optional<eosio::block_timestamp> le,
-                      std::optional<uint32_t> first,
-                      std::optional<uint32_t> last,
-                      std::optional<std::string> before,
-                      std::optional<std::string> after) const;
-
-   NftConnection collectedNfts(std::optional<eosio::block_timestamp> gt,
-                               std::optional<eosio::block_timestamp> ge,
-                               std::optional<eosio::block_timestamp> lt,
-                               std::optional<eosio::block_timestamp> le,
-                               std::optional<uint32_t> first,
-                               std::optional<uint32_t> last,
-                               std::optional<std::string> before,
-                               std::optional<std::string> after) const;
-
-   MemberElectionConnection elections(std::optional<eosio::block_timestamp> gt,
-                                      std::optional<eosio::block_timestamp> ge,
-                                      std::optional<eosio::block_timestamp> lt,
-                                      std::optional<eosio::block_timestamp> le,
-                                      std::optional<uint32_t> first,
-                                      std::optional<uint32_t> last,
-                                      std::optional<std::string> before,
-                                      std::optional<std::string> after) const;
-   DistributionFundConnection distributionFunds(std::optional<eosio::block_timestamp> gt,
-                                                std::optional<eosio::block_timestamp> ge,
-                                                std::optional<eosio::block_timestamp> lt,
-                                                std::optional<eosio::block_timestamp> le,
-                                                std::optional<uint32_t> first,
-                                                std::optional<uint32_t> last,
-                                                std::optional<std::string> before,
-                                                std::optional<std::string> after) const;
 };
-EOSIO_REFLECT2(
-    Member,
-    account,
-    balance,
-    inviter,
-    inductionWitnesses,
-    profile,
-    inductionVideo,
-    participating,
-    createdAt,
-    encryptionKey,
-    method(nfts, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
-    method(collectedNfts, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
-    method(elections, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
-    method(distributionFunds, "gt", "ge", "lt", "le", "first", "last", "before", "after"))
+EOSIO_REFLECT2(Member,
+               account,
+               // balance,
+               // inviter,
+               // profile,
+               inductionVideo,
+               participating,
+               createdAt)
 
 std::optional<Member> get_member(eosio::name account, bool allow_lsb)
 {
@@ -875,27 +346,6 @@ std::vector<Member> get_members(const std::vector<eosio::name>& v)
    }
    return result;
 }
-
-Member Balance::account() const
-{
-   return *get_member(_account, true);
-}
-
-Member EncryptionKey::account() const
-{
-   return *get_member(_account, true);
-}
-
-struct Session
-{
-   const session_object* session;
-
-   auto member() const { return get_member(session->eden_account); }
-   const auto& key() const { return session->key; }
-   const auto& expiration() const { return session->expiration; }
-   const auto& description() const { return session->description; }
-};
-EOSIO_REFLECT2(Session, member, key, expiration, description)
 
 struct InductionEndorsingMemberStatus
 {
@@ -934,309 +384,6 @@ struct Induction
 };
 EOSIO_REFLECT2(Induction, id, inviteeAccount, inviter, witnesses, profile, video, createdAt)
 
-struct Status
-{
-   const status* status;
-
-   bool active() const { return status->active; }
-   const std::string& community() const { return status->community; }
-   const eosio::symbol& communitySymbol() const { return status->communitySymbol; }
-   const eosio::asset& minimumDonation() const { return status->minimumDonation; }
-   auto initialMembers() const { return get_members(status->initialMembers); }
-   const std::string& genesisVideo() const { return status->genesisVideo; }
-   const eosio::asset& auctionStartingBid() const { return status->auctionStartingBid; }
-   uint32_t auctionDuration() const { return status->auctionDuration; }
-   const std::string& memo() const { return status->memo; }
-   const eosio::block_timestamp& nextElection() const { return status->nextElection; }
-   uint16_t electionThreshold() const { return status->electionThreshold; }
-   uint16_t numElectionParticipants() const { return status->numElectionParticipants; }
-};
-EOSIO_REFLECT2(Status,
-               active,
-               community,
-               initialMembers,
-               genesisVideo,
-               auctionDuration,
-               memo,
-               nextElection,
-               electionThreshold,
-               numElectionParticipants)
-
-struct ElectionRound;
-constexpr const char ElectionRoundConnection_name[] = "ElectionRoundConnection";
-constexpr const char ElectionRoundEdge_name[] = "ElectionRoundEdge";
-using ElectionRoundConnection = clchain::Connection<
-    clchain::ConnectionConfig<ElectionRound, ElectionRoundConnection_name, ElectionRoundEdge_name>>;
-
-struct ElectionGroup;
-constexpr const char ElectionGroupConnection_name[] = "ElectionGroupConnection";
-constexpr const char ElectionGroupEdge_name[] = "ElectionGroupEdge";
-using ElectionGroupConnection = clchain::Connection<
-    clchain::ConnectionConfig<ElectionGroup, ElectionGroupConnection_name, ElectionGroupEdge_name>>;
-
-struct Election
-{
-   const election_object* obj;
-
-   eosio::block_timestamp time() const { return obj->time; }
-   bool seeding() const { return obj->seeding; }
-   bool resultsAvailable() const { return obj->results_available; }
-   std::optional<eosio::block_timestamp> seedingStartTime() const
-   {
-      return obj->seeding_start_time;
-   }
-   std::optional<eosio::block_timestamp> seedingEndTime() const { return obj->seeding_end_time; }
-   std::optional<eosio::checksum256> seed() const { return obj->seed; }
-   std::optional<uint8_t> numRounds() const { return obj->num_rounds; }
-   std::optional<uint16_t> numParticipants() const { return obj->num_participants; }
-
-   ElectionRoundConnection rounds(std::optional<uint8_t> gt,
-                                  std::optional<uint8_t> ge,
-                                  std::optional<uint8_t> lt,
-                                  std::optional<uint8_t> le,
-                                  std::optional<uint32_t> first,
-                                  std::optional<uint32_t> last,
-                                  std::optional<std::string> before,
-                                  std::optional<std::string> after) const;
-   std::optional<ElectionGroup> finalGroup() const;
-};
-EOSIO_REFLECT2(Election,
-               time,
-               seeding,
-               resultsAvailable,
-               seedingStartTime,
-               seedingEndTime,
-               seed,
-               numRounds,
-               numParticipants,
-               method(rounds, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
-               finalGroup)
-
-struct MemberElection
-{
-   eosio::name account;
-   const election_object* election;
-
-   eosio::block_timestamp time() const { return election->time; }
-
-   VoteConnection votes(std::optional<uint32_t> first,
-                        std::optional<uint32_t> last,
-                        std::optional<std::string> before,
-                        std::optional<std::string> after) const;
-};
-EOSIO_REFLECT2(MemberElection, time, method(votes, "first", "last", "before", "after"))
-
-MemberElectionConnection Member::elections(std::optional<eosio::block_timestamp> gt,
-                                           std::optional<eosio::block_timestamp> ge,
-                                           std::optional<eosio::block_timestamp> lt,
-                                           std::optional<eosio::block_timestamp> le,
-                                           std::optional<uint32_t> first,
-                                           std::optional<uint32_t> last,
-                                           std::optional<std::string> before,
-                                           std::optional<std::string> after) const
-{
-   return clchain::make_connection<MemberElectionConnection, eosio::block_timestamp>(
-       gt, ge, lt, le, first, last, before, after,  //
-       db.elections.get<by_pk>(),                   //
-       [](auto& obj) { return obj.time; },          //
-       [&](auto& obj) {
-          return MemberElection{account, &obj};
-       },
-       [](auto& elections, auto key) { return elections.lower_bound(key); },
-       [](auto& elections, auto key) { return elections.upper_bound(key); });
-}
-
-struct ElectionRound
-{
-   const election_round_object* obj;
-
-   Election election() const { return {&get<by_pk>(db.elections, obj->election_time)}; }
-   uint8_t round() const { return obj->round; }
-   uint16_t numParticipants() const { return obj->num_participants; }
-   uint16_t numGroups() const { return obj->num_groups; }
-   bool requiresVoting() const { return obj->requires_voting; }
-   bool groupsAvailable() const { return obj->groups_available; }
-   bool votingStarted() const { return obj->voting_started; }
-   bool votingFinished() const { return obj->voting_finished; }
-   bool resultsAvailable() const { return obj->results_available; }
-   const std::optional<eosio::block_timestamp>& votingBegin() const { return obj->voting_begin; }
-   const std::optional<eosio::block_timestamp>& votingEnd() const { return obj->voting_end; }
-
-   ElectionGroupConnection groups(std::optional<uint32_t> first,
-                                  std::optional<uint32_t> last,
-                                  std::optional<std::string> before,
-                                  std::optional<std::string> after) const;
-};
-EOSIO_REFLECT2(ElectionRound,
-               election,
-               round,
-               numParticipants,
-               numGroups,
-               requiresVoting,
-               groupsAvailable,
-               votingStarted,
-               votingFinished,
-               resultsAvailable,
-               votingBegin,
-               votingEnd,
-               method(groups, "first", "last", "before", "after"))
-
-ElectionRoundConnection Election::rounds(std::optional<uint8_t> gt,
-                                         std::optional<uint8_t> ge,
-                                         std::optional<uint8_t> lt,
-                                         std::optional<uint8_t> le,
-                                         std::optional<uint32_t> first,
-                                         std::optional<uint32_t> last,
-                                         std::optional<std::string> before,
-                                         std::optional<std::string> after) const
-{
-   return clchain::make_connection<ElectionRoundConnection, ElectionRoundKey>(
-       gt ? std::optional{ElectionRoundKey{obj->time, *gt}}           //
-          : std::nullopt,                                             //
-       ge ? std::optional{ElectionRoundKey{obj->time, *ge}}           //
-          : std::optional{ElectionRoundKey{obj->time, 0}},            //
-       lt ? std::optional{ElectionRoundKey{obj->time, *lt}}           //
-          : std::nullopt,                                             //
-       le ? std::optional{ElectionRoundKey{obj->time, *le}}           //
-          : std::optional{ElectionRoundKey{obj->time, ~uint8_t(0)}},  //
-       first, last, before, after,                                    //
-       db.election_rounds.get<by_round>(),                            //
-       [](auto& obj) { return obj.by_round(); },                      //
-       [](auto& obj) { return ElectionRound{&obj}; },
-       [](auto& rounds, auto key) { return rounds.lower_bound(key); },
-       [](auto& rounds, auto key) { return rounds.upper_bound(key); });
-}
-
-struct ElectionGroup
-{
-   const election_group_object* obj;
-
-   Election election() const { return {&get<by_pk>(db.elections, obj->election_time)}; }
-   ElectionRound round() const
-   {
-      return {&get<by_round>(db.election_rounds, ElectionRoundKey{obj->election_time, obj->round})};
-   }
-   auto winner() const { return get_member(obj->winner); }
-   std::vector<Vote> votes() const;
-};
-EOSIO_REFLECT2(ElectionGroup, election, round, winner, votes)
-
-ElectionGroupConnection ElectionRound::groups(std::optional<uint32_t> first,
-                                              std::optional<uint32_t> last,
-                                              std::optional<std::string> before,
-                                              std::optional<std::string> after) const
-{
-   return clchain::make_connection<ElectionGroupConnection, ElectionGroupByRoundKey>(
-       std::nullopt,                                                                          // gt
-       std::optional{ElectionGroupByRoundKey{obj->election_time, obj->round, 0}},             // ge
-       std::nullopt,                                                                          // lt
-       std::optional{ElectionGroupByRoundKey{obj->election_time, obj->round, ~uint64_t(0)}},  // le
-       first, last, before, after,                                                            //
-       db.election_groups.get<by_round>(),                                                    //
-       [](auto& obj) { return obj.by_round(); },                                              //
-       [](auto& obj) { return ElectionGroup{&obj}; },
-       [](auto& groups, auto key) { return groups.lower_bound(key); },
-       [](auto& groups, auto key) { return groups.upper_bound(key); });
-}
-
-std::optional<ElectionGroup> Election::finalGroup() const
-{
-   if (obj->final_group_id)
-      return ElectionGroup{&get<by_id>(db.election_groups, *obj->final_group_id)};
-   return std::nullopt;
-}
-
-struct Vote
-{
-   const vote_object* obj;
-
-   auto voter() const { return get_member(obj->voter); }
-   auto candidate() const { return get_member(obj->candidate); }
-   const auto& video() const { return obj->video; }
-   auto group() const { return ElectionGroup{&get<by_id>(db.election_groups, obj->group_id)}; }
-};
-EOSIO_REFLECT2(Vote, voter, candidate, video, group)
-
-std::vector<Vote> ElectionGroup::votes() const
-{
-   std::vector<Vote> result;
-   auto& idx = db.votes.get<by_group>();
-   for (auto it = idx.lower_bound(std::tuple{obj->id._id, eosio::name{0}});
-        it != idx.end() && it->group_id == obj->id._id; ++it)
-   {
-      result.push_back(Vote{&*it});
-   }
-   return result;
-}
-
-VoteConnection MemberElection::votes(std::optional<uint32_t> first,
-                                     std::optional<uint32_t> last,
-                                     std::optional<std::string> before,
-                                     std::optional<std::string> after) const
-{
-   return clchain::make_connection<VoteConnection, vote_key>(
-       std::nullopt,                                    // gt
-       vote_key{account, election->time, 0},            // ge
-       std::nullopt,                                    // lt
-       vote_key{account, election->time, ~uint8_t(0)},  // le
-       first, last, before, after,                      //
-       db.votes.get<by_pk>(),                           //
-       [](auto& obj) { return obj.by_pk(); },           //
-       [](auto& obj) { return Vote{&obj}; },            //
-       [](auto& votes, auto key) { return votes.lower_bound(key); },
-       [](auto& votes, auto key) { return votes.upper_bound(key); });
-}
-
-struct Distribution
-{
-   const distribution_object* obj;
-
-   auto time() const { return obj->time; }
-   bool started() const { return obj->started; }
-   const auto& targetAmount() const { return obj->target_amount; }
-   const auto& targetRankDistribution() const { return obj->target_rank_distribution; }
-};
-EOSIO_REFLECT2(Distribution, time, started, targetAmount, targetRankDistribution)
-
-struct DistributionFund
-{
-   const distribution_fund_object* obj;
-
-   auto owner() const { return get_member(obj->owner); }
-   auto distributionTime() const { return obj->distribution_time; }
-   auto rank() const { return obj->rank; }
-   const auto& initialBalance() const { return obj->initial_balance; }
-   const auto& currentBalance() const { return obj->current_balance; }
-};
-EOSIO_REFLECT2(DistributionFund, owner, distributionTime, rank, initialBalance, currentBalance)
-
-DistributionFundConnection Member::distributionFunds(std::optional<eosio::block_timestamp> gt,
-                                                     std::optional<eosio::block_timestamp> ge,
-                                                     std::optional<eosio::block_timestamp> lt,
-                                                     std::optional<eosio::block_timestamp> le,
-                                                     std::optional<uint32_t> first,
-                                                     std::optional<uint32_t> last,
-                                                     std::optional<std::string> before,
-                                                     std::optional<std::string> after) const
-{
-   return clchain::make_connection<DistributionFundConnection, distribution_fund_key>(
-       gt ? std::optional{distribution_fund_key{account, *gt, ~uint8_t(0)}}               //
-          : std::nullopt,                                                                 //
-       ge ? std::optional{distribution_fund_key{account, *ge, 0}}                         //
-          : std::optional{distribution_fund_key{account, eosio::block_timestamp{0}, 0}},  //
-       lt ? std::optional{distribution_fund_key{account, *lt, 0}}                         //
-          : std::nullopt,                                                                 //
-       le ? std::optional{distribution_fund_key{account, *le, ~uint8_t(0)}}               //
-          : std::optional{distribution_fund_key{account, eosio::block_timestamp::max(),   //
-                                                ~uint8_t(0)}},                            //
-       first, last, before, after,                                                        //
-       db.distribution_funds.get<by_pk>(),                                                //
-       [](auto& obj) { return obj.by_pk(); },                                             //
-       [&](auto& obj) { return DistributionFund{&obj}; },
-       [](auto& distribution_funds, auto key) { return distribution_funds.lower_bound(key); },
-       [](auto& distribution_funds, auto key) { return distribution_funds.upper_bound(key); });
-}
-
 void add_genesis_member(const status& status, eosio::name member)
 {
    db.inductions.emplace(
@@ -1249,73 +396,6 @@ void add_genesis_member(const status& status, eosio::name member)
              if (witness != member)
                 obj.induction.witnesses.push_back({witness, false});
        });
-}
-
-struct Nft
-{
-   const nft_object* obj;
-
-   auto member() const { return get_member(obj->member); }
-   auto owner() const { return get_member(obj->owner); }
-   auto templateId() const { return obj->templateId; }
-   auto assetId() const { return obj->assetId; }
-   auto templateMint() const { return obj->templateMint; }
-   auto createdAt() const { return obj->createdAt; }
-};
-EOSIO_REFLECT2(Nft, member, owner, templateId, assetId, templateMint, createdAt)
-
-NftConnection Member::nfts(std::optional<eosio::block_timestamp> gt,
-                           std::optional<eosio::block_timestamp> ge,
-                           std::optional<eosio::block_timestamp> lt,
-                           std::optional<eosio::block_timestamp> le,
-                           std::optional<uint32_t> first,
-                           std::optional<uint32_t> last,
-                           std::optional<std::string> before,
-                           std::optional<std::string> after) const
-{
-   return clchain::make_connection<NftConnection, nft_account_key>(
-       gt ? std::optional{nft_account_key{account, *gt, ~uint64_t(0)}}              //
-          : std::nullopt,                                                           //
-       ge ? std::optional{nft_account_key{account, *ge, 0}}                         //
-          : std::optional{nft_account_key{account, eosio::block_timestamp{0}, 0}},  //
-       lt ? std::optional{nft_account_key{account, *lt, 0}}                         //
-          : std::nullopt,                                                           //
-       le ? std::optional{nft_account_key{account, *le, ~uint64_t(0)}}              //
-          : std::optional{nft_account_key{account, eosio::block_timestamp::max(),   //
-                                          ~uint64_t(0)}},                           //
-       first, last, before, after,                                                  //
-       db.nfts.get<by_member>(),                                                    //
-       [](auto& obj) { return obj.by_member(); },                                   //
-       [&](auto& obj) { return Nft{&obj}; },
-       [](auto& nfts, auto key) { return nfts.lower_bound(key); },
-       [](auto& nfts, auto key) { return nfts.upper_bound(key); });
-}
-
-NftConnection Member::collectedNfts(std::optional<eosio::block_timestamp> gt,
-                                    std::optional<eosio::block_timestamp> ge,
-                                    std::optional<eosio::block_timestamp> lt,
-                                    std::optional<eosio::block_timestamp> le,
-                                    std::optional<uint32_t> first,
-                                    std::optional<uint32_t> last,
-                                    std::optional<std::string> before,
-                                    std::optional<std::string> after) const
-{
-   return clchain::make_connection<NftConnection, nft_account_key>(
-       gt ? std::optional{nft_account_key{account, *gt, ~uint64_t(0)}}              //
-          : std::nullopt,                                                           //
-       ge ? std::optional{nft_account_key{account, *ge, 0}}                         //
-          : std::optional{nft_account_key{account, eosio::block_timestamp{0}, 0}},  //
-       lt ? std::optional{nft_account_key{account, *lt, 0}}                         //
-          : std::nullopt,                                                           //
-       le ? std::optional{nft_account_key{account, *le, ~uint64_t(0)}}              //
-          : std::optional{nft_account_key{account, eosio::block_timestamp::max(),   //
-                                          ~uint64_t(0)}},                           //
-       first, last, before, after,                                                  //
-       db.nfts.get<by_owner>(),                                                     //
-       [](auto& obj) { return obj.by_owner(); },                                    //
-       [&](auto& obj) { return Nft{&obj}; },
-       [](auto& nfts, auto key) { return nfts.lower_bound(key); },
-       [](auto& nfts, auto key) { return nfts.upper_bound(key); });
 }
 
 struct block_state
@@ -1345,567 +425,11 @@ void clear_table(auto& table)
 
 void clearall()
 {
-   clear_table(db.status);
-   clear_table(db.balances);
-   clear_table(db.balance_history);
    clear_table(db.inductions);
    clear_table(db.members);
-   clear_table(db.sessions);
-   clear_table(db.elections);
-   clear_table(db.election_rounds);
-   clear_table(db.election_groups);
-   clear_table(db.votes);
-   clear_table(db.distributions);
-   clear_table(db.distribution_funds);
-   clear_table(db.nfts);
-   clear_table(db.encryption_keys);
 }
 
-void delsession(eosio::name eden_account, const eosio::public_key& key)
-{
-   // ignored; events handle session creation and deletion
-}
-
-eosio::asset add_balance(eosio::name account, const eosio::asset& delta)
-{
-   eosio::asset result;
-   add_or_modify<by_pk>(db.balances, account,
-                        [&](bool is_new, auto& a)
-                        {
-                           if (is_new)
-                           {
-                              a.account = account;
-                              a.amount = delta;
-                           }
-                           else
-                              a.amount += delta;
-                           result = a.amount;
-                        });
-   return result;
-}
-
-void transfer_funds(eosio::block_timestamp time,
-                    eosio::name from,
-                    eosio::name to,
-                    eosio::asset amount,
-                    history_desc description)
-{
-   auto new_from = add_balance(from, -amount);
-   auto new_to = add_balance(to, amount);
-   db.balance_history.emplace(
-       [&](auto& h)
-       {
-          h.time = time;
-          h.account = from;
-          h.delta = -amount;
-          h.new_amount = new_from;
-          h.other_account = to;
-          h.description = description;
-       });
-   db.balance_history.emplace(
-       [&](auto& h)
-       {
-          h.time = time;
-          h.account = to;
-          h.delta = amount;
-          h.new_amount = new_to;
-          h.other_account = from;
-          h.description = description;
-       });
-}
-
-void notify_transfer(const action_context& context,
-                     eosio::name from,
-                     eosio::name to,
-                     const eosio::asset& quantity,
-                     std::string memo)
-{
-   // eosio::print("transfer ", from, " ", to, " ", quantity, " ", memo, "\n");
-   if (to == eden_account)
-   {
-      transfer_funds(context.block.timestamp, token_account, from, quantity, history_desc::deposit);
-      if (!eden::is_possible_deposit_account(from, atomic_account, atomicmarket_account))
-         transfer_funds(context.block.timestamp, from, master_pool, quantity, history_desc::fund);
-   }
-   else if (context.block_state.in_withdraw)
-   {
-      transfer_funds(context.block.timestamp, to, token_account, quantity, history_desc::withdraw);
-      context.block_state.in_withdraw = false;
-   }
-   else
-   {
-      transfer_funds(context.block.timestamp, master_pool, to, quantity,
-                     context.block_state.in_manual_transfer ? history_desc::manual_transfer
-                                                            : history_desc::external_spend);
-      transfer_funds(context.block.timestamp, to, token_account, quantity, history_desc::withdraw);
-      context.block_state.in_manual_transfer = false;
-   }
-}
-
-void check_transfer_order(const action_context& context)
-{
-   eosio::check(!context.block_state.in_withdraw && !context.block_state.in_manual_transfer,
-                "transfer notifications have incorrect order");
-}
-
-void withdraw(const action_context& context, eosio::name owner, const eosio::asset& quantity)
-{
-   check_transfer_order(context);
-   context.block_state.in_withdraw = true;
-   // notify_transfer records the withdraw
-}
-
-void donate(const action_context& context, eosio::name payer, const eosio::asset& quantity)
-{
-   transfer_funds(context.block.timestamp, payer, master_pool, quantity, history_desc::donate);
-}
-
-void transfer(const action_context& context,
-              eosio::name to,
-              const eosio::asset& quantity,
-              const std::string& memo)
-{
-   check_transfer_order(context);
-   context.block_state.in_manual_transfer = true;
-   // notify_transfer records the transfer
-}
-
-void fundtransfer(const action_context& context,
-                  eosio::name from,
-                  eosio::block_timestamp distribution_time,
-                  uint8_t rank,
-                  eosio::name to,
-                  eosio::asset amount,
-                  const std::string& memo)
-{
-   transfer_funds(context.block.timestamp, distribution_fund, to, amount,
-                  history_desc::fund_transfer);
-   modify<by_pk>(db.distribution_funds, distribution_fund_key{from, distribution_time, rank},
-                 [&](auto& fund) { fund.current_balance -= amount; });
-}
-
-void usertransfer(const action_context& context,
-                  eosio::name from,
-                  eosio::name to,
-                  eosio::asset amount,
-                  const std::string& memo)
-{
-   transfer_funds(context.block.timestamp, from, to, amount, history_desc::user_transfer);
-}
-
-void genesis(std::string community,
-             eosio::symbol community_symbol,
-             eosio::asset minimum_donation,
-             std::vector<eosio::name> initial_members,
-             std::string genesis_video,
-             eden::atomicassets::attribute_map collection_attributes,
-             eosio::asset auction_starting_bid,
-             uint32_t auction_duration,
-             std::string memo)
-{
-   auto& idx = db.status.get<by_id>();
-   eosio::check(idx.empty(), "duplicate genesis action");
-   db.status.emplace(
-       [&](auto& obj)
-       {
-          obj.status.community = std::move(community);
-          obj.status.communitySymbol = std::move(community_symbol);
-          obj.status.minimumDonation = std::move(minimum_donation);
-          obj.status.initialMembers = std::move(initial_members);
-          obj.status.genesisVideo = std::move(genesis_video);
-          obj.status.collectionAttributes = std::move(collection_attributes);
-          obj.status.auctionStartingBid = std::move(auction_starting_bid);
-          obj.status.auctionDuration = std::move(auction_duration);
-          obj.status.memo = std::move(memo);
-          for (auto& member : obj.status.initialMembers)
-             add_genesis_member(obj.status, member);
-       });
-}
-
-void addtogenesis(eosio::name new_genesis_member)
-{
-   auto& status = get_status();
-   db.status.modify(get_status(),
-                    [&](auto& obj) { obj.status.initialMembers.push_back(new_genesis_member); });
-   for (auto& obj : db.inductions)
-      db.inductions.modify(obj,
-                           [&](auto& obj) {
-                              obj.induction.witnesses.push_back({new_genesis_member, false});
-                           });
-   add_genesis_member(status.status, new_genesis_member);
-}
-
-void inductinit(const action_context& context,
-                uint64_t id,
-                eosio::name inviter,
-                eosio::name invitee,
-                std::vector<eosio::name> witnesses_accounts)
-{
-   // contract doesn't allow inductinit() until it transitioned to active
-   const auto& status = get_status();
-   if (!status.status.active)
-      db.status.modify(status, [&](auto& obj) { obj.status.active = true; });
-
-   std::vector<InductionEndorser> witnesses;
-   for (const auto& witness : witnesses_accounts)
-   {
-      witnesses.push_back(InductionEndorser{witness, false});
-   }
-
-   add_or_replace<by_pk>(db.inductions, id,
-                         [&](auto& obj)
-                         {
-                            obj.induction.id = id;
-                            obj.induction.inviter = {inviter, false};
-                            obj.induction.invitee = invitee;
-                            obj.induction.witnesses = witnesses;
-                            obj.induction.createdAt =
-                                eosio::block_timestamp(context.block.timestamp);
-                         });
-}
-
-void inductprofil(uint64_t id, eden::new_member_profile profile)
-{
-   modify<by_pk>(db.inductions, id,
-                 [&](auto& obj)
-                 {
-                    obj.induction.profile = profile;
-
-                    // reset endorsements
-                    obj.induction.inviter.second = false;
-                    for (auto& witness : obj.induction.witnesses)
-                    {
-                       witness.second = false;
-                    }
-                 });
-}
-
-void inductmeetin(eosio::name account,
-                  uint64_t id,
-                  const std::vector<eden::encrypted_key>& keys,
-                  const eosio::bytes& data,
-                  const std::optional<eosio::bytes>& old_data)
-{
-}
-
-void inductvideo(eosio::name account, uint64_t id, std::string video)
-{
-   modify<by_pk>(db.inductions, id,
-                 [&](auto& obj)
-                 {
-                    obj.induction.video = video;
-
-                    // reset endorsements
-                    obj.induction.inviter.second = false;
-                    for (auto& witness : obj.induction.witnesses)
-                    {
-                       witness.second = false;
-                    }
-                 });
-}
-
-void inductcancel(eosio::name account, uint64_t id)
-{
-   remove_if_exists<by_pk>(db.inductions, id);
-}
-
-void inductdonate(const action_context& context,
-                  eosio::name payer,
-                  uint64_t id,
-                  eosio::asset quantity)
-{
-   auto& induction = get<by_pk>(db.inductions, id);
-
-   auto& member = db.members.emplace(
-       [&](auto& obj)
-       {
-          obj.member.account = induction.induction.invitee;
-          obj.member.inviter = induction.induction.inviter.first;
-
-          std::vector<eosio::name> inductionWitnesses;
-          for (const auto& witness : induction.induction.witnesses)
-          {
-             inductionWitnesses.push_back(witness.first);
-          }
-          obj.member.inductionWitnesses = std::move(inductionWitnesses);
-
-          obj.member.profile = induction.induction.profile;
-          obj.member.inductionVideo = induction.induction.video;
-          obj.member.createdAt = eosio::block_timestamp(context.block.timestamp);
-          if (obj.member.inductionVideo.empty())
-             obj.member.inductionVideo = get_status().status.genesisVideo;
-       });
-
-   transfer_funds(context.block.timestamp, payer, master_pool, quantity,
-                  history_desc::inductdonate);
-
-   auto& index = db.inductions.get<by_invitee>();
-   for (auto it = index.lower_bound(std::pair<eosio::name, uint64_t>{member.member.account, 0});
-        it != index.end() && it->induction.invitee == member.member.account;)
-   {
-      auto next = it;
-      ++next;
-      db.inductions.remove(*it);
-      it = next;
-   }
-}
-
-void inductendors(const action_context& context,
-                  eosio::name account,
-                  uint64_t id,
-                  eosio::checksum256 induction_data_hash)
-{
-   auto& induction = get<by_pk>(db.inductions, id);
-   modify<by_pk>(db.inductions, id,
-                 [&](auto& obj)
-                 {
-                    if (account == obj.induction.inviter.first)
-                    {
-                       obj.induction.inviter.second = true;
-                    }
-                    else
-                    {
-                       for (auto& witness : obj.induction.witnesses)
-                       {
-                          if (witness.first == account)
-                          {
-                             witness.second = true;
-                             break;
-                          }
-                       }
-                    }
-                 });
-}
-
-void resign(eosio::name account)
-{
-   remove_if_exists<by_pk>(db.members, account);
-}
-
-void removemember(eosio::name account, const std::string& memo)
-{
-   remove_if_exists<by_pk>(db.members, account);
-}
-
-void rename(eosio::name old_account, eosio::name new_account)
-{
-   auto update = [&](auto& acc)
-   {
-      if (acc == old_account)
-         acc = new_account;
-   };
-   auto update_vec = [&](auto& vec)
-   { std::replace(vec.begin(), vec.end(), old_account, new_account); };
-
-   db.status.modify(get_status(), [&](auto& status) { update_vec(status.status.initialMembers); });
-
-   if (auto* obj = get_ptr<by_pk>(db.balances, old_account))
-      db.balances.modify(*obj, [&](auto& obj) { obj.account = new_account; });
-
-   for (auto& obj : db.balance_history)
-      db.balance_history.modify(obj,
-                                [&](auto& obj)
-                                {
-                                   update(obj.account);
-                                   update(obj.other_account);
-                                });
-
-   if (auto* obj = get_ptr<by_pk>(db.encryption_keys, old_account))
-      db.encryption_keys.modify(*obj, [&](auto& obj) { obj.account = new_account; });
-
-   for (auto& obj : db.inductions)
-      db.inductions.modify(obj,
-                           [&](auto& obj)
-                           {
-                              update(obj.induction.inviter.first);
-                              for (auto& w : obj.induction.witnesses)
-                                 update(w.first);
-                           });
-
-   for (auto& obj : db.members)
-      db.members.modify(obj,
-                        [&](auto& obj)
-                        {
-                           update(obj.member.account);
-                           update(obj.member.inviter);
-                           update_vec(obj.member.inductionWitnesses);
-                        });
-
-   for (auto& obj : db.election_groups)
-      db.election_groups.modify(obj,
-                                [&](auto& obj)
-                                {
-                                   // first_member is kept as is since it's only used by events
-                                   // which have already occurred, and it isn't exposed to the UI
-                                   update(obj.winner);
-                                });
-
-   for (auto& obj : db.votes)
-      db.votes.modify(obj,
-                      [&](auto& obj)
-                      {
-                         update(obj.voter);
-                         update(obj.candidate);
-                      });
-
-   {
-      auto& idx = db.distribution_funds.get<by_pk>();
-      for (auto it = idx.lower_bound(distribution_fund_key{old_account, {}, 0});
-           it != idx.end() && it->owner == old_account;)
-      {
-         auto next = it;
-         ++next;
-         db.distribution_funds.modify(*it, [&](auto& obj) { obj.owner = new_account; });
-         it = next;
-      }
-   }
-
-   {
-      auto& idx = db.nfts.get<by_member>();
-      for (auto it = idx.lower_bound(nft_account_key{old_account, {}, 0});
-           it != idx.end() && it->member == old_account;)
-      {
-         auto next = it;
-         ++next;
-         db.nfts.modify(*it, [&](auto& obj) { obj.member = new_account; });
-         it = next;
-      }
-   }
-
-   {
-      auto& idx = db.nfts.get<by_owner>();
-      for (auto it = idx.lower_bound(nft_account_key{old_account, {}, 0});
-           it != idx.end() && it->owner == old_account;)
-      {
-         auto next = it;
-         ++next;
-         db.nfts.modify(*it, [&](auto& obj) { obj.owner = new_account; });
-         it = next;
-      }
-   }
-}  // rename
-
-void clear_participating()
-{
-   auto& idx = db.members.template get<by_pk>();
-   for (auto it = idx.begin(); it != idx.end(); ++it)
-      if (it->member.participating)
-         db.members.modify(*it, [](auto& obj) { obj.member.participating = false; });
-   db.status.modify(get_status(), [&](auto& status) { status.status.numElectionParticipants = 0; });
-}
-
-void electopt(eosio::name voter, bool participating)
-{
-   modify<by_pk>(db.members, voter, [&](auto& obj) { obj.member.participating = participating; });
-   db.status.modify(get_status(), [&](auto& status)
-                    { status.status.numElectionParticipants += participating ? 1 : -1; });
-}
-
-void electvote(uint8_t round, eosio::name voter, eosio::name candidate)
-{
-   auto& election_idx = db.elections.get<by_pk>();
-   eosio::check(!election_idx.empty(), "electvote without any elections");
-   auto& election = *--election_idx.end();
-   auto& vote = get<by_pk>(db.votes, std::tuple{voter, election.time, round});
-   db.votes.modify(vote, [&](auto& vote) { vote.candidate = candidate; });
-}
-
-void electmeeting(eosio::name account,
-                  uint8_t round,
-                  const std::vector<eden::encrypted_key>& keys,
-                  const eosio::bytes& data,
-                  const std::optional<eosio::bytes>& old_data)
-{
-}
-
-void electvideo(uint8_t round, eosio::name voter, const std::string& video)
-{
-   auto& election_idx = db.elections.get<by_pk>();
-   if (election_idx.empty())
-      return;
-   auto& election = *--election_idx.end();
-   auto* vote = get_ptr<by_pk>(db.votes, std::tuple{voter, election.time, round});
-   if (vote)
-      db.votes.modify(*vote, [&](auto& vote) { vote.video = video; });
-}
-
-void setencpubkey(eosio::name member, eosio::public_key key)
-{
-   add_or_modify<by_pk>(db.encryption_keys, member,
-                        [&](bool is_new, auto& row)
-                        {
-                           row.account = member;
-                           row.encryptionKey = key;
-                        });
-}
-
-void logmint(const action_context& context,
-             uint64_t asset_id,
-             eosio::name authorized_minter,
-             eosio::name collection_name,
-             eosio::name schema_name,
-             int32_t template_id,
-             eosio::name new_asset_owner,
-             eden::atomicassets::attribute_map immutable_data,
-             eden::atomicassets::attribute_map mutable_data,
-             std::vector<eosio::asset> backed_tokens,
-             eden::atomicassets::attribute_map immutable_template_data)
-{
-   if (authorized_minter != eden_account || collection_name != eden_account ||
-       schema_name != eden::schema_name)
-      return;
-
-   auto account_pos = std::find_if(immutable_template_data.begin(), immutable_data.end(),
-                                   [](const auto& attr) { return attr.key == "account"; });
-   if (account_pos == immutable_template_data.end())
-      return;  // this nft has no eden member account value
-
-   eosio::name member_account(std::get<std::string>(account_pos->value));
-
-   uint64_t template_mint = 0;
-   auto& index = db.nfts.get<by_member>();
-   for (auto it = index.lower_bound(nft_account_key{member_account, eosio::block_timestamp(0), 0});
-        it != index.end() && it->member == member_account; it++)
-   {
-      template_mint++;
-   }
-
-   db.nfts.emplace(
-       [&](auto& nft)
-       {
-          nft.member = member_account;
-          nft.owner = new_asset_owner;
-          nft.templateId = template_id;
-          nft.assetId = asset_id;
-          nft.templateMint = template_mint;
-          nft.createdAt = eosio::block_timestamp(context.block.timestamp);
-       });
-}
-
-void logtransfer(const action_context& context,
-                 eosio::name collection_name,
-                 eosio::name from,
-                 eosio::name to,
-                 std::vector<uint64_t> asset_ids,
-                 std::string memo)
-{
-   if (collection_name != eden_account)
-      return;
-
-   auto& index = db.nfts.get<by_pk>();
-
-   for (const auto& asset_id : asset_ids)
-   {
-      auto it = index.find(asset_id);
-      if (it == index.end())
-      {
-         continue;
-      }
-
-      db.nfts.modify(*it, [&](auto& nft) { nft.owner = to; });
-   }
-}
-
+// EVENTS HANDLER
 void handle_event(const eden::migration_event& event)
 {
    db.status.modify(get_status(),
@@ -2143,6 +667,8 @@ void handle_event(const action_context& context, const eden::event& event)
    std::visit([&](const auto& event) { handle_event(context, event); }, event);
 }
 
+// END EVENTS HANDLER
+
 template <typename... Args>
 void call(void (*f)(Args...), const action_context& context, eosio::input_stream& s)
 {
@@ -2161,26 +687,6 @@ void call(void (*f)(const action_context&, Args...),
    // TODO: prevent abort, indicate what failed
    eosio::from_bin(t, s);
    std::apply([&](auto&&... args) { f(context, std::move(args)...); }, t);
-}
-
-void remove_expired_inductions(const eosio::time_point& block_time, const status& status)
-{
-   if (status.isMigrationCompleted<eden::fix_inductdonate_expiration_check>())
-      return;  // skip if migration is not ready to collect expired records
-
-   auto expiration_time = block_time.sec_since_epoch() - eden::induction_expiration_secs;
-
-   auto& index = db.inductions.get<by_createdAt>();
-   auto it = index.begin();
-
-   while (it != index.end() &&
-          it->induction.createdAt.to_time_point().sec_since_epoch() < expiration_time)
-   {
-      auto next = it;
-      ++next;
-      db.inductions.remove(*it);
-      it = next;
-   }
 }
 
 void clean_data(const subchain::eosio_block& block)
@@ -2299,14 +805,6 @@ void filter_block(const subchain::eosio_block& block)
             auto events = eosio::convert_from_bin<std::vector<eden::event>>(action.hexData.data);
             for (auto& event : events)
                handle_event(context, event);
-         }
-         else if (action.firstReceiver == atomic_account && action.receiver == eden_account)
-         {
-            eosio::input_stream s(action.hexData.data);
-            if (action.name == "logmint"_n)
-               call(logmint, context, s);
-            else if (action.name == "logtransfer"_n)
-               call(logtransfer, context, s);
          }
       }  // for(action)
 
@@ -2568,80 +1066,17 @@ bool add_block(eosio::ship_protocol::block_position block,
    return true;
 }
 
-constexpr const char MemberConnection_name[] = "MemberConnection";
-constexpr const char MemberEdge_name[] = "MemberEdge";
-using MemberConnection =
-    clchain::Connection<clchain::ConnectionConfig<Member, MemberConnection_name, MemberEdge_name>>;
-
-constexpr const char SessionConnection_name[] = "SessionConnection";
-constexpr const char SessionEdge_name[] = "SessionEdge";
-using SessionConnection = clchain::Connection<
-    clchain::ConnectionConfig<Session, SessionConnection_name, SessionEdge_name>>;
-
-constexpr const char ElectionConnection_name[] = "ElectionConnection";
-constexpr const char ElectionEdge_name[] = "ElectionEdge";
-using ElectionConnection = clchain::Connection<
-    clchain::ConnectionConfig<Election, ElectionConnection_name, ElectionEdge_name>>;
-
-constexpr const char DistributionConnection_name[] = "DistributionConnection";
-constexpr const char DistributionEdge_name[] = "DistributionEdge";
-using DistributionConnection = clchain::Connection<
-    clchain::ConnectionConfig<Distribution, DistributionConnection_name, DistributionEdge_name>>;
-
 struct Query
 {
    subchain::BlockLog blockLog;
 
-   std::optional<Status> status() const
-   {
-      auto& idx = db.status.get<by_id>();
-      if (idx.size() != 1)
-         return std::nullopt;
-      return Status{&idx.begin()->status};
-   }
-
-   BalanceConnection balances(std::optional<eosio::name> gt,
-                              std::optional<eosio::name> ge,
-                              std::optional<eosio::name> lt,
-                              std::optional<eosio::name> le,
-                              std::optional<uint32_t> first,
-                              std::optional<uint32_t> last,
-                              std::optional<std::string> before,
-                              std::optional<std::string> after) const
-   {
-      return clchain::make_connection<BalanceConnection, eosio::name>(
-          gt, ge, lt, le, first, last, before, after,  //
-          db.balances.get<by_pk>(),                    //
-          [](auto& obj) { return obj.account; },       //
-          [](auto& obj) {
-             return Balance{obj.account, &obj};
-          },
-          [](auto& balances, auto key) { return balances.lower_bound(key); },
-          [](auto& balances, auto key) { return balances.upper_bound(key); });
-   }
-
-   Balance masterPool() const { return get_balance(master_pool); }
-   Balance distributionFund() const { return get_balance(distribution_fund); }
-
-   EncryptionKeyConnection encryptionKeys(std::optional<eosio::name> gt,
-                                          std::optional<eosio::name> ge,
-                                          std::optional<eosio::name> lt,
-                                          std::optional<eosio::name> le,
-                                          std::optional<uint32_t> first,
-                                          std::optional<uint32_t> last,
-                                          std::optional<std::string> before,
-                                          std::optional<std::string> after) const
-   {
-      return clchain::make_connection<EncryptionKeyConnection, eosio::name>(
-          gt, ge, lt, le, first, last, before, after,  //
-          db.encryption_keys.get<by_pk>(),             //
-          [](auto& obj) { return obj.account; },       //
-          [](auto& obj) {
-             return EncryptionKey{obj.account, &obj};
-          },
-          [](auto& encryption_keys, auto key) { return encryption_keys.lower_bound(key); },
-          [](auto& encryption_keys, auto key) { return encryption_keys.upper_bound(key); });
-   }
+   // std::optional<Status> status() const
+   // {
+   //    auto& idx = db.status.get<by_id>();
+   //    if (idx.size() != 1)
+   //       return std::nullopt;
+   //    return Status{&idx.begin()->status};
+   // }
 
    MemberConnection members(std::optional<eosio::name> gt,
                             std::optional<eosio::name> ge,
@@ -2691,32 +1126,6 @@ struct Query
           [](auto& members, auto key) { return members.upper_bound(key); });
    }
 
-   SessionConnection sessions(std::optional<eosio::name> gt,
-                              std::optional<eosio::name> ge,
-                              std::optional<eosio::name> lt,
-                              std::optional<eosio::name> le,
-                              std::optional<uint32_t> first,
-                              std::optional<uint32_t> last,
-                              std::optional<std::string> before,
-                              std::optional<std::string> after) const
-   {
-      return clchain::make_connection<SessionConnection, SessionKey>(
-          gt ? std::optional{SessionKey{*gt, public_key_max_r1}}  //
-             : std::nullopt,                                      //
-          ge ? std::optional{SessionKey{*ge, public_key_min_k1}}  //
-             : std::nullopt,                                      //
-          lt ? std::optional{SessionKey{*lt, public_key_min_k1}}  //
-             : std::nullopt,                                      //
-          le ? std::optional{SessionKey{*le, public_key_max_r1}}  //
-             : std::nullopt,                                      //
-          first, last, before, after,                             //
-          db.sessions.get<by_pk>(),                               //
-          [](auto& obj) { return obj.by_pk(); },                  //
-          [](auto& obj) { return Session{&obj}; },
-          [](auto& sessions, auto key) { return sessions.lower_bound(key); },
-          [](auto& sessions, auto key) { return sessions.upper_bound(key); });
-   }
-
    InductionConnection inductions(std::optional<uint64_t> gt,
                                   std::optional<uint64_t> ge,
                                   std::optional<uint64_t> lt,
@@ -2764,58 +1173,14 @@ struct Query
           [](auto& inductions, auto key) { return inductions.lower_bound(key); },
           [](auto& inductions, auto key) { return inductions.upper_bound(key); });
    }
-
-   ElectionConnection elections(std::optional<eosio::block_timestamp> gt,
-                                std::optional<eosio::block_timestamp> ge,
-                                std::optional<eosio::block_timestamp> lt,
-                                std::optional<eosio::block_timestamp> le,
-                                std::optional<uint32_t> first,
-                                std::optional<uint32_t> last,
-                                std::optional<std::string> before,
-                                std::optional<std::string> after) const
-   {
-      return clchain::make_connection<ElectionConnection, eosio::block_timestamp>(
-          gt, ge, lt, le, first, last, before, after,  //
-          db.elections.get<by_pk>(),                   //
-          [](auto& obj) { return obj.time; },          //
-          [](auto& obj) { return Election{&obj}; },
-          [](auto& elections, auto key) { return elections.lower_bound(key); },
-          [](auto& elections, auto key) { return elections.upper_bound(key); });
-   }
-
-   DistributionConnection distributions(std::optional<eosio::block_timestamp> gt,
-                                        std::optional<eosio::block_timestamp> ge,
-                                        std::optional<eosio::block_timestamp> lt,
-                                        std::optional<eosio::block_timestamp> le,
-                                        std::optional<uint32_t> first,
-                                        std::optional<uint32_t> last,
-                                        std::optional<std::string> before,
-                                        std::optional<std::string> after) const
-   {
-      return clchain::make_connection<DistributionConnection, eosio::block_timestamp>(
-          gt, ge, lt, le, first, last, before, after,  //
-          db.distributions.get<by_pk>(),               //
-          [](auto& obj) { return obj.time; },          //
-          [](auto& obj) { return Distribution{&obj}; },
-          [](auto& distributions, auto key) { return distributions.lower_bound(key); },
-          [](auto& distributions, auto key) { return distributions.upper_bound(key); });
-   }
 };
 EOSIO_REFLECT2(
     Query,
     blockLog,
-    status,
-    masterPool,
-    distributionFund,
-    method(balances, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
-    method(encryptionKeys, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
     method(members, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
     method(membersByCreatedAt, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
-    method(sessions, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
     method(inductions, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
-    method(inductionsByCreatedAt, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
-    method(elections, "gt", "ge", "lt", "le", "first", "last", "before", "after"),
-    method(distributions, "gt", "ge", "lt", "le", "first", "last", "before", "after"))
+    method(inductionsByCreatedAt, "gt", "ge", "lt", "le", "first", "last", "before", "after"))
 
 auto schema = clchain::get_gql_schema<Query>();
 [[clang::export_name("getSchemaSize")]] uint32_t getSchemaSize()
