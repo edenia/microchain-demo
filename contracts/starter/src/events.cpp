@@ -2,7 +2,7 @@
 #include <eosio/bytes.hpp>
 #include <events.hpp>
 
-namespace eden
+namespace starter
 {
    std::vector<char> serialized_events;
    uint32_t num_events = 0;
@@ -32,4 +32,4 @@ namespace eden
          num_events = 0;
       }
    }
-}  // namespace eden
+}  // namespace starter

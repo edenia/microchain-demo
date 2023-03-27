@@ -1,25 +1,34 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 
-namespace eden {
-  struct starter {
-    eosio::name account;
+namespace starter
+{
+   struct greeting
+   {
+      eosio::name account;
+      std::string message;
 
-    uint64_t primary_key() const { return account.value; }
-  };
-  EOSIO_REFLECT( starter, account )
-  typedef eosio::multi_index< "starter"_n, starter > starter_table;
+      uint64_t primary_key() const { return account.value; }
+   };
+   EOSIO_REFLECT(greeting, account, message)
+   using greeting_table = eosio::multi_index<"greeting"_n, greeting>;
 
-  struct starter_contract : public eosio::contract {
-  public:
-    using eosio::contract::contract;
+   class starter_contract : public eosio::contract
+   {
+     private:
+      greeting_table greeting_tb;
 
-    void hi( eosio::name account );
+     public:
+      using eosio::contract::contract;
 
-  private:
-    const eosio::name DEFAULT_ACCOUNT = eosio::name( "starter" );
-  };
+      starter_contract(eosio::name receiver, eosio::name code, eosio::datastream<const char*> ds)
+          : contract(receiver, code, ds), greeting_tb(receiver, receiver.value)
+      {
+      }
 
-  EOSIO_ACTIONS( starter_contract, "starter"_n, action( hi, account ) )
+      void hi(eosio::name account, std::string& message);
+   };
 
-} // namespace eden
+   EOSIO_ACTIONS(starter_contract, "starter"_n, action(hi, account, message))
+
+}  // namespace starter

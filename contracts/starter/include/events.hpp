@@ -10,17 +10,20 @@
 #include <variant>
 #include <vector>
 
-namespace eden
+namespace starter
 {
-   struct session_del_event
-   {
-      eosio::name eden_account;
-      eosio::public_key key;
-   };
-   EOSIO_REFLECT(session_del_event, eden_account, key)
 
-   using event = std::variant<session_del_event>;
+   // WORKING: create event and listen for it in the microchain
+
+   struct greeting_event
+   {
+      eosio::name account;
+      std::string message;
+   };
+   EOSIO_REFLECT(greeting_event, account, message)
+
+   using event = std::variant<greeting_event>;
 
    void push_event(const event& e, eosio::name self);
    void send_events(eosio::name self);
-}  // namespace eden
+}  // namespace starter

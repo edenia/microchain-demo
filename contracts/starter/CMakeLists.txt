@@ -1,5 +1,5 @@
 # Build starter.wasm contract
-add_executable(starter src/starter.cpp)
+add_executable(starter src/starter.cpp src/events.cpp)
 target_include_directories(starter PUBLIC include)
 target_link_libraries(starter eosio-contract-simple-malloc)
 set_target_properties(starter PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROOT_BINARY_DIR})
@@ -24,28 +24,28 @@ create_testing("test-starter" "")
 create_testing("test-starter" "-debug")
 eden_tester_test(test-starter)
 
-# function(add_starter_microchain suffix)
-#     add_executable(starter-micro-chain${suffix}
-#         src/starter-micro-chain.cpp
-#     )
-#     target_link_libraries(starter-micro-chain${suffix} clchain${suffix} eosio-contracts-wasi-polyfill${suffix})
-#     target_include_directories(starter-micro-chain${suffix} PRIVATE
-#         include
-#         ../../libraries/eosiolib/contracts/include
-#         ../../libraries/eosiolib/core/include
-#     )
-#     set_target_properties(starter-micro-chain${suffix} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROOT_BINARY_DIR})
-#     target_link_options(starter-micro-chain${suffix} PRIVATE
-#         -Wl,--stack-first
-#         -Wl,--no-entry
-#         -Wl,-z,stack-size=8192
-#         -nostdlib
-#         -lc++
-#         -lc++abi
-#         -lc
-#         ${WASI_SDK_PREFIX}/lib/clang/11.0.0/lib/wasi/libclang_rt.builtins-wasm32.a
-#     )
-#     add_dependencies(starter-micro-chain${suffix} eden)
-# endfunction()
+function(add_starter_microchain suffix)
+    add_executable(starter-micro-chain${suffix}
+        src/starter-micro-chain.cpp
+    )
+    target_link_libraries(starter-micro-chain${suffix} clchain${suffix} eosio-contracts-wasi-polyfill${suffix})
+    target_include_directories(starter-micro-chain${suffix} PRIVATE
+        include
+        ../../libraries/eosiolib/contracts/include
+        ../../libraries/eosiolib/core/include
+    )
+    set_target_properties(starter-micro-chain${suffix} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROOT_BINARY_DIR})
+    target_link_options(starter-micro-chain${suffix} PRIVATE
+        -Wl,--stack-first
+        -Wl,--no-entry
+        -Wl,-z,stack-size=8192
+        -nostdlib
+        -lc++
+        -lc++abi
+        -lc
+        ${WASI_SDK_PREFIX}/lib/clang/11.0.0/lib/wasi/libclang_rt.builtins-wasm32.a
+    )
+    add_dependencies(starter-micro-chain${suffix} starter)
+endfunction()
 
-# add_starter_microchain("")
+add_starter_microchain("")
