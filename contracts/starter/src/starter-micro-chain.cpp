@@ -620,14 +620,6 @@ struct Query
 {
    subchain::BlockLog blockLog;
 
-   // std::optional<Status> status() const
-   // {
-   //    auto& idx = db.status.get<by_id>();
-   //    if (idx.size() != 1)
-   //       return std::nullopt;
-   //    return Status{&idx.begin()->status};
-   // }
-
    GreetingConnection greetings(std::optional<eosio::name> gt,
                                 std::optional<eosio::name> ge,
                                 std::optional<eosio::name> lt,
