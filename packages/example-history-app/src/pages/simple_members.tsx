@@ -5,17 +5,17 @@ import { usePagedQuery } from "@edenos/eden-subchain-client/dist/ReactSubchain";
 
 const query = `
 {
-  members(@page@) {
+  greetings(@page@) {
     pageInfo{hasPreviousPage hasNextPage startCursor endCursor}
     edges{node{account}}
   }
 }`;
 
-function Members() {
+function Greetings() {
     const pagedResult = usePagedQuery(
         query,
         10,
-        (result) => result.data?.members.pageInfo
+        (result) => result.data?.greetings.pageInfo
     );
     return (
         <Fragment>
@@ -46,7 +46,7 @@ function Members() {
                 </button>
             </div>
             <ul>
-                {pagedResult.result?.data?.members.edges.map((edge: any) => (
+                {pagedResult.result?.data?.greetings.edges.map((edge: any) => (
                     <li key={edge.node.account}>{edge.node.account}</li>
                 ))}
             </ul>
@@ -70,7 +70,7 @@ export default function Page() {
                 }
             `}</style>
             <Head>
-                <title>Members</title>
+                <title>Greetings</title>
             </Head>
             <main style={{ height: "100%" }}>
                 <div
@@ -81,7 +81,7 @@ export default function Page() {
                     }}
                 >
                     <Header />
-                    <Members />
+                    <Greetings />
                 </div>
             </main>
         </div>

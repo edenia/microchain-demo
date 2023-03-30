@@ -31,12 +31,12 @@ export default function Header() {
             <ul>
                 <li>
                     <Link href="/">
-                        <a>Members</a>
+                        <a>Greetings</a>
                     </Link>
                 </li>
                 <li>
                     <Link href="/simple_members">
-                        <a>Simple Members</a>
+                        <a>Simple Greetings</a>
                     </Link>
                 </li>
                 <li>

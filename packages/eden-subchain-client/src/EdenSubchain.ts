@@ -109,23 +109,8 @@ export class EdenSubchain {
         buf.pushName(atomicmarketAccount);
         const edenAccountLow = buf.getUint32();
         const edenAccountHigh = buf.getUint32();
-        const tokenAccountLow = buf.getUint32();
-        const tokenAccountHigh = buf.getUint32();
-        const atomicAccountLow = buf.getUint32();
-        const atomicAccountHigh = buf.getUint32();
-        const atomicmarketAccountLow = buf.getUint32();
-        const atomicmarketAccountHigh = buf.getUint32();
         this.protect(() => {
-            this.exports.initialize(
-                edenAccountLow,
-                edenAccountHigh,
-                tokenAccountLow,
-                tokenAccountHigh,
-                atomicAccountLow,
-                atomicAccountHigh,
-                atomicmarketAccountLow,
-                atomicmarketAccountHigh
-            );
+            this.exports.initialize(edenAccountLow, edenAccountHigh);
             this.initialized = true;
         });
     }

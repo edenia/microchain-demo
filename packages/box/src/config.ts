@@ -41,7 +41,7 @@ export const ipfsConfig = {
 };
 console.info({
     ...ipfsConfig,
-    pinataJwt: `<secret>`,
+    pinataJwt: "<secret>",
 });
 
 export const validUploadActions: ValidUploadActions = {

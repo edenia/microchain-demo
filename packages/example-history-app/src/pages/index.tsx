@@ -4,7 +4,7 @@ import { usePagedQuery } from "@edenos/eden-subchain-client/dist/ReactSubchain";
 
 const query = `
 {
-  members(@page@) {
+  greetings(@page@) {
     pageInfo {
       hasPreviousPage
       hasNextPage
@@ -14,18 +14,14 @@ const query = `
     edges {
       node {
         account
-        profile {
-          name
-          img
-          bio
-        }
+        message
       }
     }
   }
 }`;
 
 interface QueryResult {
-    members: {
+    greetings: {
         pageInfo: {
             hasPreviousPage: boolean;
             hasNextPage: boolean;
@@ -36,11 +32,7 @@ interface QueryResult {
             {
                 node: {
                     account: string;
-                    profile: {
-                        name: string;
-                        img: string;
-                        bio: string;
-                    };
+                    message: string;
                 };
             }
         ];
@@ -51,11 +43,11 @@ function Members() {
     const pagedResult = usePagedQuery<QueryResult>(
         query,
         4,
-        (result) => result.data?.members.pageInfo
+        (result) => result.data?.greetings.pageInfo
     );
     return (
         <div style={{ flexGrow: 1, margin: "10px" }}>
-            <h1>Members</h1>
+            <h1>Greetings</h1>
 
             <button disabled={!pagedResult.result} onClick={pagedResult.first}>
                 first
@@ -76,7 +68,7 @@ function Members() {
                 last
             </button>
 
-            {pagedResult.result?.data?.members.edges.map((edge) => (
+            {pagedResult.result?.data?.greetings.edges.map((edge) => (
                 <table
                     key={edge.node.account}
                     style={{ margin: 20, borderStyle: "solid" }}
@@ -84,21 +76,15 @@ function Members() {
                     <tbody>
                         <tr>
                             <td>
-                                <b>Name:</b>
+                                <b>Account:</b>
                             </td>
-                            <td>{edge.node.profile.name}</td>
+                            <td>{edge.node.account}</td>
                         </tr>
                         <tr>
                             <td>
-                                <b>Image:</b>
+                                <b>Message:</b>
                             </td>
-                            <td>{edge.node.profile.img}</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <b>Bio:</b>
-                            </td>
-                            <td>{edge.node.profile.bio}</td>
+                            <td>{edge.node.message}</td>
                         </tr>
                     </tbody>
                 </table>
