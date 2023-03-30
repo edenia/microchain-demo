@@ -16,22 +16,6 @@ using namespace eosio::literals;
 
 eosio::name starter_account;
 
-const eosio::name account_min = eosio::name{0};
-const eosio::name account_max = eosio::name{~uint64_t(0)};
-const eosio::block_timestamp block_timestamp_min = eosio::block_timestamp{0};
-const eosio::block_timestamp block_timestamp_max = eosio::block_timestamp{~uint32_t(0)};
-
-const eosio::ecc_public_key ecc_public_key_min = {};
-
-const eosio::ecc_public_key ecc_public_key_max = {
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-};
-
-const eosio::public_key public_key_min_k1{std::in_place_index_t<0>{}, ecc_public_key_min};
-const eosio::public_key public_key_max_r1{std::in_place_index_t<1>{}, ecc_public_key_max};
-
 // TODO: switch to uint64_t (js BigInt) after we upgrade to nodejs >= 15
 extern "C" void __wasm_call_ctors();
 [[clang::export_name("initialize")]] void initialize(uint32_t starter_account_low,
@@ -261,12 +245,7 @@ void hi(eosio::name account, const std::string& message)
 
 void handle_event(const starter::greeting_event& event)
 {
-   // db.greetings.emplace(
-   //     [&](auto& row)
-   //     {
-   //        row.greeting.account = event.account;
-   //        row.greeting.message = event.message;
-   //     });
+   
 }
 
 void handle_event(const auto& event) {}
@@ -343,12 +322,6 @@ void filter_block(const subchain::eosio_block& block)
             eosio::input_stream s(action.hexData.data);
             dispatch(action.name, context, s);
          }
-         // else if (action.firstReceiver == token_account && action.receiver == starter_account &&
-         //          action.name == "transfer"_n)
-         // {
-         //    eosio::input_stream s(action.hexData.data);
-         //    call(notify_transfer, context, s);
-         // }
          else if (action.firstReceiver == "eosio.null"_n && action.name == "eden.events"_n &&
                   action.creatorAction && action.creatorAction->receiver == starter_account)
          {
@@ -459,12 +432,6 @@ bool add_block(subchain::block_with_id&& bi, uint32_t eosio_irreversible)
    session.push();
    if (!need_undo)
       db.db.set_revision(bi.num);
-   // printf("%s block: %d %d log: %d irreversible: %d db: %d-%d %s\n", block_log.status_str[status],
-   //        (int)bi.eosioBlock.num, (int)bi.num, (int)block_log.blocks.size(),
-   //        block_log.irreversible,  //
-   //        (int)db.db.undo_stack_revision_range().first,
-   //        (int)db.db.undo_stack_revision_range().second,  //
-   //        to_string(bi.eosioBlock.id).c_str());
    return true;
 }
 
@@ -522,10 +489,6 @@ bool add_block(eosio::ship_protocol::block_position block,
    subchain::eosio_block eosio_block;
    eosio::from_json(eosio_block, s);
    return add_block(std::move(eosio_block), eosio_irreversible);
-   // printf("%d blocks processed, %d blocks now in log\n", (int)eosio_blocks.size(),
-   //        (int)block_log.blocks.size());
-   // for (auto& b : block_log.blocks)
-   //    printf("%d\n", (int)b->num);
 }
 
 // TODO: prevent from_bin from aborting
