@@ -11,7 +11,6 @@ namespace starter
    {
       require_auth(account);
 
-      eosio::check(eosio::is_account(account), "account does not exist");
       eosio::check(message.size() <= 256, "message is too long");
 
       push_event(greeting_event{account, message}, get_self());
