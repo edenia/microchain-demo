@@ -13,8 +13,6 @@
 namespace starter
 {
 
-   // WORKING: create event and listen for it in the microchain
-
    struct greeting_event
    {
       eosio::name account;

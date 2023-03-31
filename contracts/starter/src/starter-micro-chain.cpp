@@ -16,33 +16,9 @@ using namespace eosio::literals;
 
 eosio::name starter_account;
 
-// TODO: switch to uint64_t (js BigInt) after we upgrade to nodejs >= 15
-extern "C" void __wasm_call_ctors();
-[[clang::export_name("initialize")]] void initialize(uint32_t starter_account_low,
-                                                     uint32_t starter_account_high)
-{
-   __wasm_call_ctors();
-   starter_account.value = (uint64_t(starter_account_high) << 32) | starter_account_low;
-}
-
-[[clang::export_name("allocateMemory")]] void* allocateMemory(uint32_t size)
-{
-   return malloc(size);
-}
-[[clang::export_name("freeMemory")]] void freeMemory(void* p)
-{
-   free(p);
-}
-
 std::variant<std::string, std::vector<char>> result;
-[[clang::export_name("getResultSize")]] uint32_t getResultSize()
-{
-   return std::visit([](auto& data) { return data.size(); }, result);
-}
-[[clang::export_name("getResult")]] const char* getResult()
-{
-   return std::visit([](auto& data) { return data.data(); }, result);
-}
+
+subchain::block_log block_log;
 
 template <typename T>
 void dump(const T& ind)
@@ -89,52 +65,6 @@ template <typename T>
 using ordered_by_createdAt = boost::multi_index::ordered_unique<  //
     boost::multi_index::tag<by_createdAt>,
     boost::multi_index::key<&T::by_createdAt>>;
-
-uint64_t available_pk(const auto& table, const auto& first)
-{
-   auto& idx = table.template get<by_pk>();
-   if (idx.empty())
-      return first;
-   return (--idx.end())->by_pk() + 1;
-}
-
-enum tables
-{
-   greeting_table,
-};
-
-struct Greeting;
-constexpr const char GreetingConnection_name[] = "GreetingConnection";
-constexpr const char GreetingEdge_name[] = "GreetingEdge";
-using GreetingConnection = clchain::Connection<
-    clchain::ConnectionConfig<Greeting, GreetingConnection_name, GreetingEdge_name>>;
-
-struct greeting
-{
-   eosio::name account;
-   std::string message;
-};
-
-struct greeting_object : public chainbase::object<greeting_table, greeting_object>
-{
-   CHAINBASE_DEFAULT_CONSTRUCTOR(greeting_object)
-
-   id_type id;
-   greeting greeting;
-
-   eosio::name by_pk() const { return greeting.account; }
-};
-using greeting_index =
-    mic<greeting_object, ordered_by_id<greeting_object>, ordered_by_pk<greeting_object>>;
-
-struct database
-{
-   chainbase::database db;
-   chainbase::generic_index<greeting_index> greetings;
-
-   database() { db.add_index(greetings); }
-};
-database db;
 
 template <typename Tag, typename Table, typename Key, typename F>
 void add_or_modify(Table& table, const Key& key, F&& f)
@@ -193,6 +123,44 @@ const typename Table::value_type* get_ptr(Table& table, const Key& key)
       return nullptr;
    return &*it;
 }
+
+enum tables
+{
+   greeting_table,
+};
+
+struct Greeting;
+constexpr const char GreetingConnection_name[] = "GreetingConnection";
+constexpr const char GreetingEdge_name[] = "GreetingEdge";
+using GreetingConnection = clchain::Connection<
+    clchain::ConnectionConfig<Greeting, GreetingConnection_name, GreetingEdge_name>>;
+
+struct greeting
+{
+   eosio::name account;
+   std::string message;
+};
+
+struct greeting_object : public chainbase::object<greeting_table, greeting_object>
+{
+   CHAINBASE_DEFAULT_CONSTRUCTOR(greeting_object)
+
+   id_type id;
+   greeting greeting;
+
+   eosio::name by_pk() const { return greeting.account; }
+};
+using greeting_index =
+    mic<greeting_object, ordered_by_id<greeting_object>, ordered_by_pk<greeting_object>>;
+
+struct database
+{
+   chainbase::database db;
+   chainbase::generic_index<greeting_index> greetings;
+
+   database() { db.add_index(greetings); }
+};
+database db;
 
 struct Greeting
 {
@@ -407,8 +375,6 @@ std::vector<subchain::transaction> ship_to_eden_transactions(
    return transactions;
 }
 
-subchain::block_log block_log;
-
 void forked_n_blocks(size_t n)
 {
    if (n)
@@ -478,6 +444,36 @@ bool add_block(eosio::ship_protocol::block_position block,
    eosio_block.transactions = ship_to_eden_transactions(traces);
    return add_block(std::move(eosio_block), eosio_irreversible);
 }
+
+struct Query
+{
+   subchain::BlockLog blockLog;
+
+   GreetingConnection greetings(std::optional<eosio::name> gt,
+                                std::optional<eosio::name> ge,
+                                std::optional<eosio::name> lt,
+                                std::optional<eosio::name> le,
+                                std::optional<uint32_t> first,
+                                std::optional<uint32_t> last,
+                                std::optional<std::string> before,
+                                std::optional<std::string> after) const
+   {
+      return clchain::make_connection<GreetingConnection, eosio::name>(
+          gt, ge, lt, le, first, last, before, after,      //
+          db.greetings.get<by_pk>(),                       //
+          [](auto& obj) { return obj.greeting.account; },  //
+          [](auto& obj) {
+             return Greeting{obj.greeting.account, &obj.greeting};
+          },
+          [](auto& greetings, auto key) { return greetings.lower_bound(key); },
+          [](auto& greetings, auto key) { return greetings.upper_bound(key); });
+   }
+};
+EOSIO_REFLECT2(Query,
+               blockLog,
+               method(greetings, "gt", "ge", "lt", "le", "first", "last", "before", "after"))
+
+auto schema = clchain::get_gql_schema<Query>();
 
 // TODO: prevent from_json from aborting
 [[clang::export_name("addEosioBlockJson")]] bool addEosioBlockJson(const char* json,
@@ -579,39 +575,40 @@ bool add_block(eosio::ship_protocol::block_position block,
    return true;
 }
 
-struct Query
+// TODO: switch to uint64_t (js BigInt) after we upgrade to nodejs >= 15
+extern "C" void __wasm_call_ctors();
+[[clang::export_name("initialize")]] void initialize(uint32_t starter_account_low,
+                                                     uint32_t starter_account_high)
 {
-   subchain::BlockLog blockLog;
+   __wasm_call_ctors();
+   starter_account.value = (uint64_t(starter_account_high) << 32) | starter_account_low;
+}
 
-   GreetingConnection greetings(std::optional<eosio::name> gt,
-                                std::optional<eosio::name> ge,
-                                std::optional<eosio::name> lt,
-                                std::optional<eosio::name> le,
-                                std::optional<uint32_t> first,
-                                std::optional<uint32_t> last,
-                                std::optional<std::string> before,
-                                std::optional<std::string> after) const
-   {
-      return clchain::make_connection<GreetingConnection, eosio::name>(
-          gt, ge, lt, le, first, last, before, after,      //
-          db.greetings.get<by_pk>(),                       //
-          [](auto& obj) { return obj.greeting.account; },  //
-          [](auto& obj) {
-             return Greeting{obj.greeting.account, &obj.greeting};
-          },
-          [](auto& greetings, auto key) { return greetings.lower_bound(key); },
-          [](auto& greetings, auto key) { return greetings.upper_bound(key); });
-   }
-};
-EOSIO_REFLECT2(Query,
-               blockLog,
-               method(greetings, "gt", "ge", "lt", "le", "first", "last", "before", "after"))
+[[clang::export_name("allocateMemory")]] void* allocateMemory(uint32_t size)
+{
+   return malloc(size);
+}
 
-auto schema = clchain::get_gql_schema<Query>();
+[[clang::export_name("freeMemory")]] void freeMemory(void* p)
+{
+   free(p);
+}
+
+[[clang::export_name("getResultSize")]] uint32_t getResultSize()
+{
+   return std::visit([](auto& data) { return data.size(); }, result);
+}
+
+[[clang::export_name("getResult")]] const char* getResult()
+{
+   return std::visit([](auto& data) { return data.data(); }, result);
+}
+
 [[clang::export_name("getSchemaSize")]] uint32_t getSchemaSize()
 {
    return schema.size();
 }
+
 [[clang::export_name("getSchema")]] const char* getSchema()
 {
    return schema.c_str();
