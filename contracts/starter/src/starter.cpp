@@ -1,6 +1,3 @@
-#include <eosio/asset.hpp>
-#include <eosio/eosio.hpp>
-
 #include <events.hpp>
 #include <starter.hpp>
 
