@@ -94,23 +94,15 @@ export class EdenSubchain {
         }
     }
 
-    initializeMemory(
-        edenAccount: string,
-        tokenAccount: string,
-        atomicAccount: string,
-        atomicmarketAccount: string
-    ) {
+    initializeMemory(account: string) {
         if (this.initialized)
             throw new Error("wasm memory is already initialized");
         const buf = new Serialize.SerialBuffer();
-        buf.pushName(edenAccount);
-        buf.pushName(tokenAccount);
-        buf.pushName(atomicAccount);
-        buf.pushName(atomicmarketAccount);
-        const edenAccountLow = buf.getUint32();
-        const edenAccountHigh = buf.getUint32();
+        buf.pushName(account);
+        const accountLow = buf.getUint32();
+        const accountHigh = buf.getUint32();
         this.protect(() => {
-            this.exports.initialize(edenAccountLow, edenAccountHigh);
+            this.exports.initialize(accountLow, accountHigh);
             this.initialized = true;
         });
     }

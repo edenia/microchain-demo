@@ -90,11 +90,8 @@ export class DfuseReceiver {
     numSaved = 0;
 
     queryString = `(
-        auth:${subchainConfig.eden} -action:setcode -action:setabi ||
-        receiver:${subchainConfig.eden} account:${subchainConfig.eden} ||
-        receiver:${subchainConfig.eden} account:${subchainConfig.token} ||
-        receiver:${subchainConfig.eden} account:${subchainConfig.atomic} ||
-        receiver:${subchainConfig.eden} account:${subchainConfig.atomicMarket}
+        auth:${subchainConfig.account} -action:setcode -action:setabi ||
+        receiver:${subchainConfig.account} account:${subchainConfig.account}
     )`;
 
     variables = {
@@ -258,7 +255,7 @@ export class DfuseReceiver {
 
     async connect() {
         if (this.stream) {
-            logger.info(`already connected`);
+            logger.info("already connected");
             return;
         }
         try {

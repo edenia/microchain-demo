@@ -3,10 +3,7 @@ import { useContext, useEffect, useState, createContext } from "react";
 
 export interface UseSubchainClientOptions {
     fetch: any;
-    edenAccount?: string;
-    tokenAccount?: string;
-    atomicAccount?: string;
-    atomicmarketAccount?: string;
+    account?: string;
     wasmUrl: string;
     stateUrl: string;
     blocksUrl: string;
@@ -25,10 +22,7 @@ export function useCreateEdenChain(
                     const fetch = options.fetch;
                     client = new SubchainClient(WebSocket);
                     await client.instantiateStreaming({
-                        edenAccount: options.edenAccount,
-                        tokenAccount: options.tokenAccount,
-                        atomicAccount: options.atomicAccount,
-                        atomicmarketAccount: options.atomicmarketAccount,
+                        account: options.account,
                         wasmResponse: fetch(options.wasmUrl),
                         stateResponse: fetch(options.stateUrl),
                         blocksUrl: options.blocksUrl,

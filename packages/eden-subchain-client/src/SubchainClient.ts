@@ -6,10 +6,7 @@ import {
 } from "./SubchainProtocol";
 
 export interface SubchainClientOptions {
-    edenAccount?: string;
-    tokenAccount?: string;
-    atomicAccount?: string;
-    atomicmarketAccount?: string;
+    account?: string;
     wasmResponse: PromiseLike<Response>;
     stateResponse: PromiseLike<Response>;
     blocksUrl: string;
@@ -41,12 +38,7 @@ export default class SubchainClient {
         if (state) {
             this.subchain.setMemory(state);
         } else {
-            this.subchain.initializeMemory(
-                options.edenAccount || "genesis.eden",
-                options.tokenAccount || "eosio.token",
-                options.atomicAccount || "atomicassets",
-                options.atomicmarketAccount || "atomicmarket"
-            );
+            this.subchain.initializeMemory(options.account || "chainstarter");
         }
         this.connect();
     }

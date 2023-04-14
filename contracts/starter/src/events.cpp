@@ -11,7 +11,7 @@ namespace starter
    {
       auto s = eosio::convert_to_bin(e);
       auto est_size = 5 + serialized_events.size() + s.size();
-      if (est_size > 4 * 1024)
+      if (est_size > 4 * 1024)  // An action has a maximum size of 4 KiB
          send_events(self);
       serialized_events.insert(serialized_events.end(), s.begin(), s.end());
       ++num_events;

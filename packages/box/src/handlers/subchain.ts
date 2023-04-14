@@ -145,12 +145,7 @@ export function createWSServer(path: string, server: http.Server) {
 
 export async function startSubchain() {
     try {
-        await storage.instantiate(
-            subchainConfig.eden,
-            subchainConfig.token,
-            subchainConfig.atomic,
-            subchainConfig.atomicMarket
-        );
+        await storage.instantiate(subchainConfig.account);
 
         await setupReceiver();
     } catch (e: any) {

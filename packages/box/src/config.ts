@@ -1,5 +1,3 @@
-import { ValidUploadActions } from "@edenos/common";
-
 import * as packageJson from "../package.json";
 import logger from "./logger";
 
@@ -33,35 +31,6 @@ export const edenContractAccount =
     process.env.EDEN_CONTRACT_ACCOUNT || "test.edev";
 console.info(edenContractAccount);
 
-export const ipfsConfig = {
-    pinataPinFileUrl:
-        process.env.IPFS_PINATA_PIN_FILE_URL ||
-        "https://api.pinata.cloud/pinning/pinFileToIPFS",
-    pinataJwt: process.env.IPFS_PINATA_JWT || "<pinata-jwt-here>",
-};
-console.info({
-    ...ipfsConfig,
-    pinataJwt: "<secret>",
-});
-
-export const validUploadActions: ValidUploadActions = {
-    [edenContractAccount]: {
-        inductprofil: {
-            maxSize: 1_000_000,
-            cidField: "new_member_profile.img",
-        },
-        inductvideo: { maxSize: 100_000_000, cidField: "video" },
-        electvideo: {
-            maxSize: 1_000_000_000,
-            cidField: "video",
-        },
-    },
-};
-logger.info(
-    "Supported EOS IPFS Upload Actions\n" +
-        JSON.stringify(validUploadActions, undefined, 2)
-);
-
 export const serverPaysConfig = {
     serverPaysPrivateKey: process.env.SERVER_PAYS_PRIVATE_KEY || "<secret-pk>",
     serverPaysAccount: process.env.SERVER_PAYS_ACCOUNT || "payer",
@@ -79,8 +48,6 @@ logger.info(
         )
 );
 
-export const enableEdenSessions = process.env.SESSIONS_ENABLE === "true";
-
 export enum SubchainReceivers {
     UNKNOWN,
     DFUSE,
@@ -89,11 +56,9 @@ export enum SubchainReceivers {
 
 export const subchainConfig = {
     enable: !("SUBCHAIN_DISABLE" in process.env),
-    eden: process.env.SUBCHAIN_EDEN_CONTRACT || "genesis.eden",
-    token: process.env.SUBCHAIN_TOKEN_CONTRACT || "eosio.token",
-    atomic: process.env.SUBCHAIN_AA_CONTRACT || "atomicassets",
-    atomicMarket: process.env.SUBCHAIN_AA_MARKET_CONTRACT || "atomicmarket",
-    wasmFile: process.env.SUBCHAIN_WASM || "../../build/eden-micro-chain.wasm",
+    account: process.env.SUBCHAIN_EDEN_CONTRACT || "chainstarter",
+    wasmFile:
+        process.env.SUBCHAIN_WASM || "../../build/starter-micro-chain.wasm",
     stateFile: process.env.SUBCHAIN_STATE || "state",
     receiver:
         SubchainReceivers[
