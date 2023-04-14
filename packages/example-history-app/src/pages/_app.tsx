@@ -7,9 +7,6 @@ import "../../../../node_modules/graphiql/graphiql.min.css";
 
 if (
     !process.env.NEXT_PUBLIC_EDEN_CONTRACT ||
-    !process.env.NEXT_PUBLIC_TOKEN_CONTRACT ||
-    !process.env.NEXT_PUBLIC_AA_CONTRACT ||
-    !process.env.NEXT_PUBLIC_AA_MARKET_CONTRACT ||
     !process.env.NEXT_PUBLIC_SUBCHAIN_WASM_URL ||
     !process.env.NEXT_PUBLIC_SUBCHAIN_STATE_URL ||
     !process.env.NEXT_PUBLIC_SUBCHAIN_WS_URL ||
@@ -21,10 +18,7 @@ if (
 const MyApp = ({ Component, pageProps }: AppProps) => {
     const subchain = useCreateEdenChain({
         fetch: global.window?.fetch, // undefined for nodejs to prevent lambda perf issues
-        edenAccount: process.env.NEXT_PUBLIC_EDEN_CONTRACT,
-        tokenAccount: process.env.NEXT_PUBLIC_TOKEN_CONTRACT,
-        atomicAccount: process.env.NEXT_PUBLIC_AA_CONTRACT,
-        atomicmarketAccount: process.env.NEXT_PUBLIC_AA_MARKET_CONTRACT,
+        account: process.env.NEXT_PUBLIC_EDEN_CONTRACT,
         wasmUrl: process.env.NEXT_PUBLIC_SUBCHAIN_WASM_URL!,
         stateUrl:
             process.env.NEXT_PUBLIC_SUBCHAIN_SLOW_MO === "true"
