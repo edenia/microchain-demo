@@ -1,23 +1,23 @@
-import { EdenSubchain } from "@edenos/eden-subchain-client/dist/EdenSubchain";
+import { Subchain } from "@microchain/subchain-client/dist/Subchain";
 import * as config from "./config";
 import * as fs from "fs";
 import logger from "./logger";
 
 export class Storage {
-    blocksWasm: EdenSubchain | null = null;
-    stateWasm: EdenSubchain | null = null;
+    blocksWasm: Subchain | null = null;
+    stateWasm: Subchain | null = null;
     head = 0;
     callbacks: (() => void)[] = [];
 
     async instantiate(account: string) {
         try {
-            this.blocksWasm = new EdenSubchain();
+            this.blocksWasm = new Subchain();
             await this.blocksWasm.instantiate(
                 new Uint8Array(fs.readFileSync(config.subchainConfig.wasmFile))
             );
             this.blocksWasm.initializeMemory(account);
 
-            this.stateWasm = new EdenSubchain();
+            this.stateWasm = new Subchain();
             await this.stateWasm.instantiate(
                 new Uint8Array(fs.readFileSync(config.subchainConfig.wasmFile))
             );

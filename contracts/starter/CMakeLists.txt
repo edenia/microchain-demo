@@ -22,7 +22,7 @@ endfunction()
 
 create_testing("test-starter" "")
 create_testing("test-starter" "-debug")
-eden_tester_test(test-starter)
+add_tester_test(test-starter)
 
 function(add_starter_microchain suffix)
     add_executable(starter-micro-chain${suffix}

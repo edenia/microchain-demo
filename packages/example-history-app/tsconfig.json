@@ -4,7 +4,7 @@
         "lib": ["dom", "dom.iterable", "esnext"],
         "baseUrl": "src",
         "paths": {
-            "@edenos/*": ["packages/*/src"]
+            "@microchain/*": ["packages/*/src"]
         },
         "allowJs": true,
         "strict": true,

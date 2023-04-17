@@ -3,17 +3,17 @@ import GraphiQL from "graphiql";
 import Header from "../components/header";
 import { buildSchema, GraphQLSchema } from "graphql";
 import { useContext } from "react";
-import { EdenChainContext } from "@edenos/eden-subchain-client/dist/ReactSubchain";
-import { EdenSubchain } from "@edenos/eden-subchain-client/dist/EdenSubchain";
+import { ChainContext } from "@microchain/subchain-client/dist/ReactSubchain";
+import { Subchain } from "@microchain/subchain-client/dist/Subchain";
 
-function createFetcher(subchain: EdenSubchain) {
+function createFetcher(subchain: Subchain) {
     return async ({ query }: { query: string }) => subchain.query(query);
 }
 
 const defaultQuery = `# GraphiQL is talking to a WASM running in the browser.
 # The WASM is preloaded with state which includes a subset
 # of blocks on the EOS blockchain with actions related to
-# the genesis.eden contract.
+# the chainstarter contract.
 
 {
   members(first: 3, after: "30A95491D3189537") {
@@ -35,7 +35,7 @@ const defaultQuery = `# GraphiQL is talking to a WASM running in the browser.
 let schema: GraphQLSchema | null = null;
 
 export default function GraphiQLPage() {
-    const client = useContext(EdenChainContext);
+    const client = useContext(ChainContext);
     if (client?.subchain && !schema)
         schema = buildSchema(client.subchain.getSchema());
     return (

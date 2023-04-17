@@ -19,7 +19,7 @@ endif()
 function(native_test N)
 endfunction()
 
-function(eden_tester_test N)
+function(add_tester_test N)
     add_test(
         NAME t-${N}
         WORKING_DIRECTORY ${ROOT_BINARY_DIR}

@@ -1,6 +1,6 @@
 {
-    "name": "@edenos/box",
-    "description": "Eden Box",
+    "name": "@microchain/box",
+    "description": "Microchain Box",
     "version": "0.1.0",
     "license": "MIT",
     "scripts": {
@@ -16,8 +16,8 @@
     },
     "dependencies": {
         "@dfuse/client": "^0.3.20",
-        "@edenos/common": "^0.1.0",
-        "@edenos/eden-subchain-client": "^0.1.2",
+        "@microchain/common": "^0.1.0",
+        "@microchain/subchain-client": "^0.1.2",
         "axios": "^0.21.1",
         "body-parser": "^1.19.0",
         "cids": "^1.1.6",
@@ -28,7 +28,6 @@
         "express": "^4.17.1",
         "form-data": "^4.0.0",
         "hash.js": "^1.1.7",
-        "ipfs-http-client": "^50.0.0",
         "morgan": "^1.10.0",
         "multer": "^1.4.2",
         "node-fetch": "^2.6.1",

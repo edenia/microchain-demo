@@ -27,9 +27,9 @@ export const rpcEndpoint = {
 };
 console.info(rpcEndpoint);
 
-export const edenContractAccount =
-    process.env.EDEN_CONTRACT_ACCOUNT || "test.edev";
-console.info(edenContractAccount);
+export const contractAccount =
+    process.env.MICROCHAIN_CONTRACT_ACCOUNT || "chainstarter";
+console.info(contractAccount);
 
 export const serverPaysConfig = {
     serverPaysPrivateKey: process.env.SERVER_PAYS_PRIVATE_KEY || "<secret-pk>",
@@ -56,7 +56,7 @@ export enum SubchainReceivers {
 
 export const subchainConfig = {
     enable: !("SUBCHAIN_DISABLE" in process.env),
-    account: process.env.SUBCHAIN_EDEN_CONTRACT || "chainstarter",
+    account: process.env.SUBCHAIN_CONTRACT || "chainstarter",
     wasmFile:
         process.env.SUBCHAIN_WASM || "../../build/starter-micro-chain.wasm",
     stateFile: process.env.SUBCHAIN_STATE || "state",

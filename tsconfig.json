@@ -4,7 +4,7 @@
     "compilerOptions": {
         "baseUrl": ".",
         "paths": {
-            "@edenos/*": ["packages/*/src"]
+            "@microchain/*": ["packages/*/src"]
         },
         "jsx": "react",
         "esModuleInterop": true,

@@ -1,5 +1,5 @@
 {
-    "name": "edenos",
+    "name": "microchain",
     "private": true,
     "workspaces": [
         "packages/*"

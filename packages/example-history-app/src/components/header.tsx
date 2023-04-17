@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useQuery } from "@edenos/eden-subchain-client/dist/ReactSubchain";
+import { useQuery } from "@microchain/subchain-client/dist/ReactSubchain";
 
 export default function Header() {
     const info = useQuery(`{

@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Header from "../components/header";
 import { Fragment } from "react";
-import { usePagedQuery } from "@edenos/eden-subchain-client/dist/ReactSubchain";
+import { usePagedQuery } from "@microchain/subchain-client/dist/ReactSubchain";
 
 const query = `
 {

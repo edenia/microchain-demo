@@ -10,12 +10,12 @@ import {
     ClientStatus,
     ServerMessage,
     sanitizeClientStatus,
-} from "@edenos/eden-subchain-client/dist/SubchainProtocol";
+} from "@microchain/subchain-client/dist/SubchainProtocol";
 
 const storage = new Storage();
 export const subchainHandler = express.Router();
 
-subchainHandler.get("/eden-micro-chain.wasm", (req, res) => {
+subchainHandler.get("/starter-micro-chain.wasm", (req, res) => {
     res.sendFile(path.resolve(subchainConfig.wasmFile));
 });
 
@@ -119,7 +119,7 @@ class ConnectionState {
 export function createWSServer(path: string, server: http.Server) {
     const wss = new WebSocket.Server({
         server,
-        path: `${path}/eden-microchain`,
+        path: `${path}/starter-microchain`,
     });
 
     wss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {

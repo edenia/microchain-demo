@@ -6,6 +6,3 @@
 **/node_modules
 **/state
 build
-build-dbg
-build-docker
-!build/eden-micro-chain.wasm
