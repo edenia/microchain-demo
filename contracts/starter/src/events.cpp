@@ -24,7 +24,7 @@ namespace starter
          eosio::action act;
          act.account = "eosio.null"_n;
          act.name =
-             "greeting.events"_n;  // the microchain will listen for traces that are from greeting.events action
+             "chain.events"_n;  // the microchain will listen for traces that are from chain.events action
          act.authorization.push_back({self, "active"_n});
          eosio::convert_to_bin(eosio::varuint32{num_events}, act.data);
          act.data.insert(act.data.end(), serialized_events.begin(), serialized_events.end());

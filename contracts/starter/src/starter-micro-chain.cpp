@@ -287,7 +287,7 @@ void filter_block(const subchain::eosio_block& block)
             eosio::input_stream s(action.hexData.data);
             dispatch(action.name, context, s);
          }
-         else if (action.firstReceiver == "eosio.null"_n && action.name == "greeting.events"_n &&
+         else if (action.firstReceiver == "eosio.null"_n && action.name == "chain.events"_n &&
                   action.creatorAction && action.creatorAction->receiver == starter_account)
          {
             // TODO: prevent abort, indicate what failed
