@@ -1,6 +1,19 @@
 #!/usr/bin/env sh
 set -e
-docker build -t contract-builder:latest -f docker/contract-builder.Dockerfile .
+
+# Set the Docker image name and tag
+IMAGE_NAME="contract-builder"
+TAG="latest"
+
+# Check if the Docker image already exists
+if docker images | grep -q "$IMAGE_NAME"; then
+  echo "Docker image $IMAGE_NAME already exists."
+else
+  echo "Building Docker image $IMAGE_NAME:$TAG ..."
+  # Build the Docker image
+  docker build -t "$IMAGE_NAME:$TAG" -f docker/contract-builder.Dockerfile .
+fi
+
 docker run \
     --rm \
     --mount type=bind,src="$PWD",target=/workspace \

@@ -24,7 +24,12 @@ namespace starter
       }
       else
       {
-         greeting_tb.modify(itr, eosio::same_payer, [&](auto& row) { row.message = message; });
+         greeting_tb.modify(itr, eosio::same_payer,
+                            [&](auto& row)
+                            {
+                               row.message = message;
+                               ;
+                            });
       }
    }
 }  // namespace starter
