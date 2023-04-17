@@ -9,7 +9,7 @@ add_executable(starter-abigen src/starter.cpp)
 target_include_directories(starter-abigen PRIVATE include)
 target_link_libraries(starter-abigen eosio-contract-abigen)
 add_custom_command(TARGET starter-abigen POST_BUILD
-    COMMAND cltester starter-abigen.wasm >${ROOT_BINARY_DIR}/starter.abi
+    COMMAND ${ROOT_BINARY_DIR}/cltester starter-abigen.wasm >${ROOT_BINARY_DIR}/starter.abi
 )
 
 function(create_testing test_file suffix)
