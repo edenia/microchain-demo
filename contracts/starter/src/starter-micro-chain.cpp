@@ -15,9 +15,7 @@
 using namespace eosio::literals;
 
 eosio::name starter_account;
-
 std::variant<std::string, std::vector<char>> result;
-
 subchain::block_log block_log;
 
 template <typename T>
