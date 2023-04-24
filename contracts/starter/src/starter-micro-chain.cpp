@@ -38,12 +38,7 @@ namespace boost
 
 struct by_id;
 struct by_pk;
-struct by_invitee;
-struct by_group;
-struct by_round;
 struct by_createdAt;
-struct by_member;
-struct by_owner;
 
 template <typename T, typename... Indexes>
 using mic = boost::
