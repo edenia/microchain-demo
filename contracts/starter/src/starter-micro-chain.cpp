@@ -246,35 +246,12 @@ void call(void (*f)(const action_context&, Args...),
    std::apply([&](auto&&... args) { f(context, std::move(args)...); }, t);
 }
 
-bool dispatch(eosio::name action_name, const action_context& context, eosio::input_stream& s);
-
-// TODO: study this function
-void run(const action_context& context, eosio::input_stream& s)
-{
-   //    eden::run_auth auth;
-   //    eosio::varuint32 num_verbs;
-   //    from_bin(auth, s);
-   //    from_bin(num_verbs, s);
-   //    for (uint32_t i = 0; i < num_verbs.value; ++i)
-   //    {
-   //       auto index = eosio::varuint32_from_bin(s);
-   //       auto name = eden::actions::get_name_for_session_action(index);
-   //       if (!dispatch(name, context, s))
-   //          // fatal because this throws off the rest of the stream
-   //          eosio::check(false,
-   //                       "run: verb not found: " + std::to_string(index) + " " + name.to_string());
-   //    }
-   //    eosio::check(!s.remaining(), "unpack error (extra data) within run");
-}
-
 bool dispatch(eosio::name action_name, const action_context& context, eosio::input_stream& s)
 {
-   if (action_name == "run"_n)
-      run(context, s);
+   if (action_name == "hi"_n)
+      call(hi, context, s);
    else if (action_name == "clearall"_n)
       call(clearall, context, s);
-   else if (action_name == "hi"_n)
-      call(hi, context, s);
    else
       return false;
    return true;
@@ -310,7 +287,7 @@ void filter_block(const subchain::eosio_block& block)
    }  // for(trx)
 }  // filter_block
 
-std::vector<subchain::transaction> ship_to_eden_transactions(
+std::vector<subchain::transaction> ship_to_transactions(
     std::vector<eosio::ship_protocol::transaction_trace>& traces)
 {
    std::vector<subchain::transaction> transactions;
@@ -404,11 +381,11 @@ bool add_block(subchain::block_with_id&& bi, uint32_t eosio_irreversible)
    return true;
 }
 
-bool add_block(subchain::block&& eden_block, uint32_t eosio_irreversible)
+bool add_block(subchain::block&& block, uint32_t eosio_irreversible)
 {
-   auto bin = eosio::convert_to_bin(eden_block);
+   auto bin = eosio::convert_to_bin(block);
    subchain::block_with_id bi;
-   static_cast<subchain::block&>(bi) = std::move(eden_block);
+   static_cast<subchain::block&>(bi) = std::move(block);
    bi.id = clchain::sha256(bin.data(), bin.size());
    auto bin_with_id = eosio::convert_to_bin(bi.id);
    bin_with_id.insert(bin_with_id.end(), bin.begin(), bin.end());
@@ -418,19 +395,19 @@ bool add_block(subchain::block&& eden_block, uint32_t eosio_irreversible)
 
 bool add_block(subchain::eosio_block&& eosioBlock, uint32_t eosio_irreversible)
 {
-   subchain::block eden_block;
-   eden_block.eosioBlock = std::move(eosioBlock);
+   subchain::block block;
+   block.eosioBlock = std::move(eosioBlock);
 
-   auto* eden_prev = block_log.block_before_eosio_num(eden_block.eosioBlock.num);
-   if (eden_prev)
+   auto* prev = block_log.block_before_eosio_num(block.eosioBlock.num);
+   if (prev)
    {
-      eden_block.num = eden_prev->num + 1;
-      eden_block.previous = eden_prev->id;
+      block.num = prev->num + 1;
+      block.previous = prev->id;
    }
    else
-      eden_block.num = 1;
+      block.num = 1;
 
-   return add_block(std::move(eden_block), eosio_irreversible);
+   return add_block(std::move(block), eosio_irreversible);
 }
 
 bool add_block(eosio::ship_protocol::block_position block,
@@ -444,7 +421,7 @@ bool add_block(eosio::ship_protocol::block_position block,
    eosio_block.id = block.block_id;
    eosio_block.previous = prev.block_id;
    eosio_block.timestamp = timestamp.to_time_point();
-   eosio_block.transactions = ship_to_eden_transactions(traces);
+   eosio_block.transactions = ship_to_transactions(traces);
    return add_block(std::move(eosio_block), eosio_irreversible);
 }
 
