@@ -209,9 +209,17 @@ void hi(eosio::name account, const std::string& message)
                          });
 }
 
-void handle_event(const starter::greeting_event& event) {}
+void handle_event(const starter::greeting_event& event)
+{
+   // do something with the event
+}
 
 void handle_event(const auto& event) {}
+
+void handle_event(const action_context& context, const auto& event)
+{
+   handle_event(event);
+}
 
 void handle_event(const action_context& context, const starter::event& event)
 {
